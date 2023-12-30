@@ -25,6 +25,7 @@
     "react/jsx-filename-extension": [1, { "extensions": [".js", ".jsx", ".ts", ".tsx"] }],
     "react/prop-types": "off",
     "react/button-has-type": "off",
+    "no-param-reassign": ["error", { "props": true, "ignorePropertyModificationsFor": ["state"] }], // for Redux Toolkit (which uses Immer)
     "import/no-extraneous-dependencies": [
       "error",
       {

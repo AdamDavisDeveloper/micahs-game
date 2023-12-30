@@ -7,8 +7,8 @@ type PlayerProps = {
   attack: number;
   charisma: number;
   speed: number;
-  inventory: any[];
-  companions: any[]; // object
+  inventory: any[]; // object - replace with Inventory[]
+  companions: any[]; // object - replace with Companions[]
   // ... Add other properties like weather effects, etc.
 };
 
@@ -35,14 +35,14 @@ const Player: React.FC<PlayerProps> = ({
     <div className="inventory">
       <h4>Inventory:</h4>
       {/* List items */}
-      {inventory.map((item, index) => (
+      {inventory.map((item) => (
         <p key={item.id}>{item}</p>
       ))}
     </div>
     <div className="companions">
       <h4>Companions:</h4>
       {/* List companions */}
-      {companions.map((companion, index) => (
+      {companions.map((companion) => (
         <p key={companion.id}>{companion}</p>
       ))}
     </div>
