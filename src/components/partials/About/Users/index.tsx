@@ -1,31 +1,30 @@
-import React, { useEffect } from 'react';
-import { Button, Space, Table } from 'antd';
-import { DeleteOutlined, EditOutlined, UserAddOutlined } from '@ant-design/icons';
+import React from 'react';
+// import { Button, Space, Table } from 'antd';
+// import { DeleteOutlined, EditOutlined, UserAddOutlined } from '@ant-design/icons';
 
-import { useAppSelector, useAppDispatch } from '../../../../store/hooks';
-import {
-  addUser,
-  deleteUser,
-  fetchUsers,
-  IUser,
-  selectStatus,
-  selectUsers,
-  updateUser,
-} from '../../../../store/slices/user.slice';
-import { ERequestStatus } from '../../../../common/request';
+// import { useAppSelector, useAppDispatch } from '../../../../store/hooks';
+// import {
+//   addUser,
+//   deleteUser,
+//   fetchUsers,
+//   IUser,
+//   selectStatus,
+//   selectUsers,
+//   updateUser,
+// } from '../../../../store/slices/user.slice';
+// import { ERequestStatus } from '../../../../common/request';
 
-const UserList = () => {
-  const userList = useAppSelector(selectUsers);
-  const usersStatus = useAppSelector(selectStatus);
-  const dispatch = useAppDispatch();
+const UserList = () => (
+  // const userList = useAppSelector(selectUsers);
+  // const usersStatus = useAppSelector(selectStatus);
+  // const dispatch = useAppDispatch();
 
-  useEffect(() => {
-    dispatch(fetchUsers());
-  }, [dispatch]);
+  // useEffect(() => {
+  //   dispatch(fetchUsers());
+  // }, [dispatch]);
 
-  return (
-    <div>
-      <p style={{ textAlign: 'right' }}>
+  <div>
+    {/* <p style={{ textAlign: 'right' }}>
         <Button
           type="primary"
           icon={<UserAddOutlined />}
@@ -72,9 +71,7 @@ const UserList = () => {
             </Space>
           )}
         />
-      </Table>
-    </div>
-  );
-};
-
+      </Table> */}
+  </div>
+);
 export default UserList;

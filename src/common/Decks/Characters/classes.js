@@ -1,4 +1,4 @@
-//import PolyDice.js for D func below
+// import PolyDice.js for D func below
 
 function D(value) {
     return Math.floor(Math.random() * value) + 1;
