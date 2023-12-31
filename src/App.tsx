@@ -25,8 +25,9 @@ const App = () => {
   return (
     <main>
       <Player
-        id={0}
+        id="player1"
         name="Adam"
+        characterClass="paladin"
         health={player.health}
         attack={player.attack}
         charisma={player.charisma}

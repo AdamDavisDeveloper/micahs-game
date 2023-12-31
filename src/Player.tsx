@@ -1,8 +1,9 @@
 import React from 'react';
 
 type PlayerProps = {
-  id: number;
+  id: string;
   name: string;
+  characterClass: string;
   health: number;
   attack: number;
   charisma: number;
@@ -15,6 +16,7 @@ type PlayerProps = {
 const Player: React.FC<PlayerProps> = ({
   id,
   name,
+  characterClass,
   health,
   attack,
   charisma,
@@ -26,6 +28,7 @@ const Player: React.FC<PlayerProps> = ({
   <div className="player-container">
     <h2>{name}</h2>
     <h3>{id}</h3>
+    <h4>{characterClass}</h4>
     <div className="stats">
       <p>Health: {health}</p>
       <p>Charisma: {charisma}</p>
