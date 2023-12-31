@@ -1,0 +1,18 @@
+a {
+  text-decoration: none;
+  color: rgb(27, 49, 173);
+}
+
+div {
+  border-top: 2px solid gray;
+  border-bottom: 2px solid gray;
+}
+
+.player-container {
+  .stats {
+    border: 2px solid pink;
+    padding: 3px;
+    border-radius: 5px;
+    width: max-content;
+  }
+}
