@@ -13,8 +13,8 @@ const Game = () => {
     dispatch(addItem({ playerId: 'player1', item }));
   };
 
-  const handleUpdateHealth = (newHealth: number) => {
-    dispatch(updateHealth({ playerId: 'player1', health: player.health + newHealth }));
+  const handleUpdateHealth = (adjustment: number) => {
+    dispatch(updateHealth({ playerId: 'player1', health: player.health + adjustment }));
   };
 
   return (
