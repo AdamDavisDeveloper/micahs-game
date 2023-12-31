@@ -4,8 +4,8 @@ interface PlayerState {
   [key: string]: {
     // key is the player's unique ID
     health: number;
-    attack: number;
     charisma: number;
+    attack: number;
     speed: number;
     inventory: any[]; // object - later
     companions: any[]; // object - later
@@ -14,10 +14,10 @@ interface PlayerState {
 
 const initialState: PlayerState = {
   player1: {
-    health: 100,
+    health: 70,
+    charisma: 4,
     attack: 10,
-    charisma: 10,
-    speed: 10,
+    speed: 4,
     inventory: [],
     companions: [],
   },

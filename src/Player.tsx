@@ -31,9 +31,9 @@ const Player: React.FC<PlayerProps> = ({
     <h4>{characterClass}</h4>
     <div className="stats">
       <p>Health: {health}</p>
-      <p>Charisma: {charisma}</p>
-      <p>Attack: {attack}</p>
-      <p>Speed: {speed}</p>
+      <p>Charisma: D{charisma}</p>
+      <p>Attack: D{attack}</p>
+      <p>Speed: D{speed}</p>
     </div>
     <div className="inventory">
       <h4>Inventory:</h4>
