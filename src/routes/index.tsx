@@ -10,9 +10,9 @@ const Router: FunctionComponent = () => (
   <Routes>
     <Route path="/" element={<Home />} />
     <Route
-      path="Game"
+      path="/game"
       element={
-        <Suspense>
+        <Suspense fallback={<div>Loading game...</div>}>
           <Game />
         </Suspense>
       }

@@ -1,20 +1,21 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import type { GameSnapshot } from '../../engine/types/game.types';
-import type { Intention } from '../../engine/types/game.types';
-import type { WeatherCard } from '../../engine/types/card.types';
+import type { GameSnapshot, Intention } from '../../engine/types/game.types';
+import type { Player } from '../../engine/types/player.types';
+import type { WeatherCard, EncounterCard } from '../../engine/types/card.types';
 import type { ResolutionOutcome } from '../../engine/game/ActionResolver';
 
 /**
  * Game slice state - stores a snapshot of the game engine state.
  * This is kept in sync with the GameState instance (which lives outside Redux).
+ * Note: We use mutable arrays here because Immer/Redux Toolkit requires mutable types.
  */
 type GameState = {
   // Core game state from GameSnapshot
-  players: readonly GameSnapshot['players'];
+  players: Player[];
   activePlayerId: string;
   phase: GameSnapshot['phase'];
   weather?: WeatherCard;
-  activeEncounter?: GameSnapshot['activeEncounter'];
+  activeEncounter?: EncounterCard;
 
   // UI-specific state (not in engine)
   selectedIntention?: Intention;
@@ -43,11 +44,17 @@ export const gameSlice = createSlice({
      */
     syncGameState: (state, action: PayloadAction<GameSnapshot>) => {
       const snapshot = action.payload;
-      state.players = snapshot.players;
+      // Convert readonly arrays to mutable arrays for Immer
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      state.players = [...snapshot.players] as any;
       state.activePlayerId = snapshot.activePlayerId;
       state.phase = snapshot.phase;
-      state.weather = snapshot.weather;
-      state.activeEncounter = snapshot.activeEncounter;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      state.weather = snapshot.weather ? ({ ...snapshot.weather } as any) : undefined;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      state.activeEncounter = snapshot.activeEncounter
+        ? ({ ...snapshot.activeEncounter } as any)
+        : undefined;
       state.isGameActive = true;
     },
 
@@ -96,7 +103,8 @@ export const gameSlice = createSlice({
      * This is for UI display purposes.
      */
     setRollResult: (state, action: PayloadAction<ResolutionOutcome>) => {
-      state.lastRollResult = action.payload;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      state.lastRollResult = { ...action.payload } as any;
     },
 
     /**
