@@ -1,6 +1,8 @@
 import type { EncounterCard, WeatherCard } from '../types/card.types';
 import type { GameSnapshot } from '../types/game.types';
 import type { Player, PlayerId } from '../types/player.types';
+import type { DeckEntry } from '../utils/deck';
+import { buildDeck, shuffle } from '../utils/deck';
 import { TurnManager } from './TurnManager';
 
 type Shuffler<T> = (cards: readonly T[]) => readonly T[];
@@ -15,13 +17,14 @@ function replacePlayer(players: readonly Player[], updated: Player): readonly Pl
 
 export type GameStateInit = {
   players: readonly Player[];
-  encounterDeck: readonly EncounterCard[];
+
+  // Allow either style (handy while content is still early)
+  encounterDeck?: readonly EncounterCard[];
+  encounterDeckSpec?: readonly DeckEntry<EncounterCard>[];
+
   weather?: WeatherCard;
-  /**
-   * Optional: provide a deterministic shuffler in tests.
-   * In the app you can pass a random shuffler.
-   */
   shuffler?: Shuffler<EncounterCard>;
+  rng?: () => number; // Used only for initial shuffle of deckSpec (tests can pass deterministic rng)
 };
 
 export class GameState {
@@ -57,11 +60,16 @@ export class GameState {
   static create(init: GameStateInit): GameState {
     if (init.players.length === 0) throw new Error('Game must have at least one player');
 
+    const rng = init.rng ?? Math.random;
+    const encounterDeck =
+      init.encounterDeck ??
+      (init.encounterDeckSpec ? shuffle(buildDeck(init.encounterDeckSpec), rng) : []);
+
     // Default shuffler is identity (stable) so nothing “random” happens unless you opt in.
     const shuffler = init.shuffler ?? ((cards) => [...cards]);
 
     // Turn order for now is the provided player list order.
-    // Later you can replace this with “roll speed” ordering without changing TurnManager.
+    // Later I can replace this with custom ordering
     const order = init.players.map((p) => p.id);
     const turn = TurnManager.create(order);
 
@@ -70,7 +78,7 @@ export class GameState {
       turn,
       weather: init.weather,
       activeEncounter: undefined,
-      encounterDeck: [...init.encounterDeck],
+      encounterDeck,
       graveyard: [],
       shuffler,
     });
@@ -126,7 +134,6 @@ export class GameState {
 
   /**
    * Draws the top encounter and enters encounter phase.
-   * Rules alignment:
    * - Preparation actions are allowed only when no encounter is active.
    * - Drawing an encounter ends preparation immediately.
    */
@@ -147,7 +154,7 @@ export class GameState {
 
   /**
    * Completes the encounter and moves into resolution phase.
-   * We keep the “what happens” (rewards/damage) out of here for now (Day 4 ActionResolver).
+   * We keep the rewards/damage out of here for now
    */
   resolveEncounterToGraveyard(): GameState {
     if (this.turn.getPhase() !== 'encounter') throw new Error('Can only resolve during encounter phase');
@@ -162,7 +169,7 @@ export class GameState {
   }
 
   /**
-   * Failure flow from GameInfo:
+   * Encounter Failure Flow
    * - encounter is shuffled back into the encounter deck unless specified otherwise
    */
   resolveEncounterAndShuffleBack(): GameState {
