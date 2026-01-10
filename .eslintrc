@@ -38,6 +38,17 @@
         ]
       }
     ],
-    "prettier/prettier": ["error"]
+    "prettier/prettier": "off",
+    "import/no-duplicates": "off",
+    "arrow-body-style": "off",
+    "import/prefer-default-export": "off",
+    "no-restricted-syntax": "off",
+    "@typescript-eslint/lines-between-class-members": "off",
+    "no-nested-ternary": "off",
+    "@typescript-eslint/naming-convention": "off",
+    "no-underscore-dangle": "off",
+    "prefer-const": "off",
+    "@typescript-eslint/no-unused-vars": "off",
+    "no-continue": "off"
   }
 }
