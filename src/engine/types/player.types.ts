@@ -1,6 +1,6 @@
 import type { DicePool, DieSides } from './dice.types';
 import type { ClassId, StatKey } from './effect.types';
-import type { TreasureCard } from './card.types';
+import type { ClothingCard, TreasureCard, WeaponCard } from './card.types';
 
 export type PlayerId = string;
 
@@ -20,7 +20,9 @@ export type Player = {
 
   inventory: readonly TreasureCard[];
 
-  // Minimal placeholder for now
+  equippedWeapon?: WeaponCard;
+  wornClothing?: ClothingCard;
+
   companion?: {
     id: string;
     name: string;

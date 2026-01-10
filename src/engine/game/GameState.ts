@@ -4,6 +4,7 @@ import type { Player, PlayerId } from '../types/player.types';
 import type { DeckEntry } from '../utils/deck';
 import { buildDeck, shuffle } from '../utils/deck';
 import { TurnManager } from './TurnManager';
+import { EffectSystem } from '../systems/EffectSystem';
 
 type Shuffler<T> = (cards: readonly T[]) => readonly T[];
 
@@ -187,8 +188,23 @@ export class GameState {
   }
 
   /**
+   * Starts the active player's turn.
+   * - Start-of-turn effects occur before drawing an encounter.
+   */
+  startTurn(): GameState {
+    if (this.turn.getPhase() !== 'preparation') throw new Error('Can only start turn during preparation');
+    if (this.activeEncounter) throw new Error('Cannot start turn with an active encounter');
+
+    const active = this.getActivePlayer();
+    const updated = EffectSystem.applyWeatherTurnStart(active, this.weather);
+
+    if (updated === active) return this; // If nothing changed, return this (makes tests nicer)
+    return this.updatePlayer(updated);
+  }
+
+  /**
    * Ends the active player's turn.
-   * Your rules: turns end after the encounter resolves (unless a card says draw again later).
+   * - turns end after the encounter resolves (unless a card says draw again later).
    */
   endTurn(): GameState {
     if (this.turn.getPhase() !== 'resolution') throw new Error('Can only end turn during resolution');

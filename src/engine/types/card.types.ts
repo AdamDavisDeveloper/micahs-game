@@ -43,12 +43,33 @@ export type SingleUseCard = TreasureCardBase & {
 
 export type TreasureCard = WeaponCard | ClothingCard | SingleUseCard;
 
+export type EncounterTarget = {
+  attack?: number;
+  charm?: number;
+  escape?: number;
+};
+
+export type EncounterReward =
+  | { kind: 'coin'; amount: number }
+  | { kind: 'none' };
+
 export type EncounterCard = {
   kind: 'encounter';
   id: CardId;
   name: string;
 
-  // Minimal for Day 1-2; you’ll flesh this out later (Day 3-4)
+  // Enemy attack used on failure
   attack?: { kind: 'dice'; sides: number; modifier?: number } | { kind: 'static'; value: number };
-  defenseTarget?: number; // target number to beat for Attack (example)
+
+  /**
+   * Targets are per-intention.
+   * If a target is omitted, treat it as "not supported" (ActionResolver will throw).
+   */
+  targets: EncounterTarget;
+
+  /**
+   * Minimal, safe reward model for now: coin only.
+   * Later I'll add treasure draws, weather changes, special effects, etc.
+   */
+  reward?: EncounterReward;
 };
