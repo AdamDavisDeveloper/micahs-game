@@ -6,7 +6,6 @@ export type GameAction =
   | { kind: 'resolveEncounterToGraveyard' }
   | { kind: 'resolveEncounterAndShuffleBack' }
   | { kind: 'endTurn' }
-  // Preparation stage (stubbed; I’ll flesh these out later)
   | { kind: 'shop' }
   | { kind: 'sellItem' }
   | { kind: 'equipItem' }
@@ -51,4 +50,5 @@ export class GameRules {
       }
     }
   }
+
 }

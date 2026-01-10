@@ -5,6 +5,7 @@ import type { DeckEntry } from '../utils/deck';
 import { buildDeck, shuffle } from '../utils/deck';
 import { TurnManager } from './TurnManager';
 import { EffectSystem } from '../systems/EffectSystem';
+import { InventorySystem } from '../systems/InventorySystem';
 
 type Shuffler<T> = (cards: readonly T[]) => readonly T[];
 
@@ -225,6 +226,36 @@ export class GameState {
       activeEncounter: undefined,
       turn: this.turn.nextPhase(), // encounter -> resolution (end turn + pass next)
     });
+  }
+
+   equipWeaponFromInventory(weaponId: string): GameState {
+    if (this.turn.getPhase() !== 'preparation') throw new Error('Can only equip during preparation');
+    if (this.activeEncounter) throw new Error('Cannot equip with an active encounter');
+
+    const player = this.getActivePlayer();
+    const equipped = InventorySystem.equipWeapon(player, weaponId);
+
+    if (equipped === player || !equipped.equippedWeapon) return this;
+
+    const weapon = equipped.equippedWeapon;
+    const afterEffects = EffectSystem.applyOnce(equipped, weapon.effects.standard, weapon.effects.conditional);
+
+    return this.updatePlayer(afterEffects);
+  }
+
+  equipClothingFromInventory(clothingId: string): GameState {
+    if (this.turn.getPhase() !== 'preparation') throw new Error('Can only equip during preparation');
+    if (this.activeEncounter) throw new Error('Cannot equip with an active encounter');
+
+    const player = this.getActivePlayer();
+    const equipped = InventorySystem.equipClothing(player, clothingId);
+
+    if (equipped === player || !equipped.wornClothing) return this;
+
+    const clothing = equipped.wornClothing;
+    const afterEffects = EffectSystem.applyOnce(equipped, clothing.effects);
+
+    return this.updatePlayer(afterEffects);
   }
 
   // ----- internal -----

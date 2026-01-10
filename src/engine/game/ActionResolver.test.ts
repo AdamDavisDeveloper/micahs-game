@@ -24,6 +24,7 @@ function basePlayer(overrides: Partial<Player> = {}): Player {
     coin: 0,
     stats: { attack: { dice: [4] }, charisma: { dice: [8] }, speed: { dice: [6] } },
     inventory: [],
+    creatureDock: [],
     ...overrides,
   };
 }
