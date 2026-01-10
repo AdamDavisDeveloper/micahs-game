@@ -2,6 +2,7 @@ import type { ConditionalEffectSpec, Condition, Effect, EffectSpec, EffectRepeat
 import type { DicePool } from '../types/dice.types';
 import type { Player } from '../types/player.types';
 import type { WeatherCard } from '../types/card.types';
+import type { Creature } from '../types/card.types';
 import { upgradeDicePool } from '../utils/helpers';
 
 export type EffectContext = {
@@ -52,6 +53,10 @@ function applyEffect(player: Player, effect: Effect): Player {
       return { ...player, stats: { ...player.stats, [effect.stat]: next } };
     }
 
+    case 'coin.add': {
+      return { ...player, coin: player.coin + effect.amount };
+    }
+
     default: {
       const _exhaustive: never = effect;
       return _exhaustive;
@@ -88,7 +93,7 @@ export class EffectSystem {
 
   /**
    * Applies “one-time” effects (e.g. item purchased, weather on-set bonus, etc.)
-   * We don't track "already applied" in state yet — caller controls when to call this.
+   * We don't track "already applied" in state — caller controls when to call this.
    */
   static applyOnce(player: Player, specs: readonly EffectSpec[], conditional: readonly ConditionalEffectSpec[] = []): Player {
     const ctx: EffectContext = { when: 'applyOnce' };
@@ -98,5 +103,25 @@ export class EffectSystem {
     for (const s of conditional) next = applyConditionalSpec(next, s, ctx);
 
     return next;
+  }
+
+  static applyCreatureDockTurnStart(player: Player): Player {
+    const ctx: EffectContext = { when: 'turnStart' };
+
+    let next = player;
+    for (const creature of player.creatureDock) {
+      if (!creature.effects) continue;
+      for (const s of creature.effects) next = applySpec(next, s, ctx);
+    }
+
+    return next;
+  }
+
+  /**
+  * applyTurnStart gives a good single “do the intended stuff at turn start” entry point
+  */
+  static applyTurnStart(player: Player, weather?: WeatherCard): Player {
+    const afterWeather = EffectSystem.applyWeatherTurnStart(player, weather);
+    return EffectSystem.applyCreatureDockTurnStart(afterWeather);
   }
 }

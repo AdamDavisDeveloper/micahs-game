@@ -60,7 +60,7 @@ test('ActionResolver (attack): success sends encounter to graveyard and enters r
   expect(next.getActiveEncounter()).toBeUndefined();
 });
 
-test('ActionResolver (attack): failure deals damage, shuffles back, companion lives on tie (exceeds rule)', () => {
+test('ActionResolver (attack): failure deals damage, shuffles back, companion lives', () => {
   const encounter: EncounterCard = {
     kind: 'encounter',
     id: 'e2',
@@ -81,13 +81,13 @@ test('ActionResolver (attack): failure deals damage, shuffles back, companion li
     shuffler: (cards) => cards,
   }).drawEncounter();
 
-  // player D4=1, companion D4=1 (fail), encounter attack D4=4 (damage)
-  const rng = makeRng([0.0, 0.0, 0.999]);
+  const rng = makeRng([0.0, 0.0, 0.5]); // encounter D4 = 3
 
   const { state: next, outcome } = ActionResolver.resolveActiveEncounter(state, 'attack', rng);
 
   expect(outcome.success).toBe(false);
   expect(outcome.damageTaken).toBe(3);
+  expect(outcome.companionDied).toBe(false);
   expect(next.getPhase()).toBe('resolution');
   expect(next.getActiveEncounter()).toBeUndefined();
 

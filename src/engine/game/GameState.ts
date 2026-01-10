@@ -196,7 +196,7 @@ export class GameState {
     if (this.activeEncounter) throw new Error('Cannot start turn with an active encounter');
 
     const active = this.getActivePlayer();
-    const updated = EffectSystem.applyWeatherTurnStart(active, this.weather);
+    const updated = EffectSystem.applyTurnStart(active, this.weather);
 
     if (updated === active) return this; // If nothing changed, return this (makes tests nicer)
     return this.updatePlayer(updated);
@@ -213,6 +213,17 @@ export class GameState {
     return new GameState({
       ...this.cloneArgs(),
       turn: this.turn.nextTurn(),
+    });
+  }
+
+  resolveEncounterCleared(): GameState {
+    if (this.turn.getPhase() !== 'encounter') throw new Error('Can only resolve during encounter phase');
+    if (!this.activeEncounter) throw new Error('No active encounter to resolve');
+
+    return new GameState({
+      ...this.cloneArgs(),
+      activeEncounter: undefined,
+      turn: this.turn.nextPhase(), // encounter -> resolution (end turn + pass next)
     });
   }
 

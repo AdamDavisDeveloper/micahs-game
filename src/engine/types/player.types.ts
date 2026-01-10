@@ -1,6 +1,6 @@
-import type { DicePool, DieSides } from './dice.types';
+import type { DicePool } from './dice.types';
 import type { ClassId, StatKey } from './effect.types';
-import type { ClothingCard, TreasureCard, WeaponCard } from './card.types';
+import type { ClothingCard, Creature, TreasureCard, WeaponCard } from './card.types';
 
 export type PlayerId = string;
 
@@ -23,10 +23,9 @@ export type Player = {
   equippedWeapon?: WeaponCard;
   wornClothing?: ClothingCard;
 
-  companion?: {
-    id: string;
-    name: string;
-    attackDice: readonly DieSides[];
-    defense: number;
-  };
+  // player's charmed creatures
+  creatureDock: readonly Creature[];
+
+  // companion is an actively selected creature from dock
+  companion?: Creature;
 };

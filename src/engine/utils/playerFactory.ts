@@ -4,11 +4,7 @@ import type { ClassDefinition } from '../../common/Decks/Characters/classes';
 /**
  * Converts class data (maxHp + base dice) into a full Player object.
  */
-export function createPlayerFromClass(args: {
-  id: string;
-  name: string;
-  classDef: ClassDefinition;
-}): Player {
+export function createPlayerFromClass(args: { id: string; name: string; classDef: ClassDefinition }): Player {
   const { id, name, classDef } = args;
 
   return {
@@ -28,5 +24,7 @@ export function createPlayerFromClass(args: {
     },
 
     inventory: [],
+
+    creatureDock: [],
   };
 }

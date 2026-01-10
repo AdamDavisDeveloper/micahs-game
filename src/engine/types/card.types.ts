@@ -1,4 +1,5 @@
 import type { ClassId, ConditionalEffectSpec, EffectSpec } from './effect.types';
+import type { DieSides } from './dice.types';
 
 export type CardId = string;
 
@@ -10,6 +11,15 @@ export type WeatherCard = {
   name: string;
   effects: readonly EffectSpec[];
   conditionals: readonly ConditionalEffectSpec[];
+};
+
+export type Creature = {
+  id: CardId;
+  name: string;
+  attackDice: readonly DieSides[];
+  defense: number;
+
+  effects?: readonly EffectSpec[]; // Optional passive effects (ex: +1 coin each turn start)
 };
 
 export type TreasureKind = 'weapon' | 'clothing' | 'singleUse';
@@ -72,4 +82,13 @@ export type EncounterCard = {
    * Later I'll add treasure draws, weather changes, special effects, etc.
    */
   reward?: EncounterReward;
+
+  /**
+   * If present, this encounter supports Charm:
+   * - on Charm success: add creature to player's dock, clear the encounter
+   */
+  charm?: {
+    creature: Creature;
+    reward?: EncounterReward;
+  };
 };

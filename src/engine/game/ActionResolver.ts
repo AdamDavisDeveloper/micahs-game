@@ -94,7 +94,26 @@ export class ActionResolver {
       };
     }
 
-    if (success) {
+   if (success) {
+      // Charm success: convert into a creature (if defined), clear encounter (not graveyard)
+      if (intention === 'charm') {
+        if (!encounter.charm) throw new Error(`Encounter ${encounter.id} does not support charm`);
+
+        const withCreature: Player = {
+          ...player,
+          creatureDock: [...player.creatureDock, encounter.charm.creature],
+        };
+
+        const rewarded = applyReward(withCreature, encounter.charm.reward ?? encounter.reward);
+        const nextState = state.updatePlayer(rewarded).resolveEncounterCleared();
+
+        return {
+          state: nextState,
+          outcome: { intention, playerRoll, companionRoll, total, target, success },
+        };
+      }
+
+      // Attack success (and any other future “non-charm” success): to graveyard + reward
       const rewardedPlayer = applyReward(player, encounter.reward);
       const nextState =
         rewardedPlayer === player
