@@ -1,7 +1,12 @@
 import type { EncounterCard } from '../types/card.types';
 import { GameState } from './GameState';
 
-const e1: EncounterCard = { kind: 'encounter', id: 'e1', name: 'Test Encounter' };
+const e1: EncounterCard = { 
+  cardClass: 'encounter', 
+  id: 'e1', 
+  name: 'Test Encounter',
+  targets: { defense: 5 }
+};
 
 test('GameState: draw -> resolve -> endTurn works', () => {
   const state1 = GameState.create({

@@ -15,7 +15,7 @@ test('EffectSystem: weather eachTurnStart applies hp.add', () => {
   };
 
   const weather: WeatherCard = {
-    kind: 'weather',
+    cardClass: 'weather',
     id: 'sunny',
     name: 'Sunny',
     effects: [{ effect: { kind: 'hp.add', amount: 1 }, repeat: 'eachTurnStart' }],

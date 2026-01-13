@@ -1,4 +1,5 @@
 import type { EncounterCard, WeatherCard } from '../types/card.types';
+import { weather } from '../../common/Decks/Weather/weather';
 import type { GameSnapshot } from '../types/game.types';
 import type { Player, PlayerId } from '../types/player.types';
 import type { DeckEntry } from '../utils/deck';
@@ -139,36 +140,32 @@ export class GameState {
    * - Preparation actions are allowed only when no encounter is active.
    * - Drawing an encounter ends preparation immediately.
    */
-  drawEncounter(): GameState {
+   drawEncounter(): GameState {
     if (this.turn.getPhase() !== 'preparation') throw new Error('Can only draw encounter during preparation');
     if (this.activeEncounter) throw new Error('Cannot draw: an encounter is already active');
     if (this.encounterDeck.length === 0) throw new Error('Encounter deck exhausted (win condition or reshuffle rule)');
 
     const [top, ...rest] = this.encounterDeck;
 
+    let newWeather = this.weather;
+    if (top.weatherChange) {
+      // Import weather cards to resolve WeatherId to WeatherCard
+      // You'll need to import:
+      newWeather = weather[top.weatherChange];
+      if (!newWeather) {
+        throw new Error(`Invalid weather ID: ${top.weatherChange}`);
+      }
+    }
+
     return new GameState({
       ...this.cloneArgs(),
       activeEncounter: top,
       encounterDeck: rest,
+      weather: newWeather,
       turn: this.turn.nextPhase(), // preparation -> encounter
     });
   }
 
-  /**
-   * Completes the encounter and moves into resolution phase.
-   * We keep the rewards/damage out of here for now
-   */
-  resolveEncounterToGraveyard(): GameState {
-    if (this.turn.getPhase() !== 'encounter') throw new Error('Can only resolve during encounter phase');
-    if (!this.activeEncounter) throw new Error('No active encounter to resolve');
-
-    return new GameState({
-      ...this.cloneArgs(),
-      activeEncounter: undefined,
-      graveyard: [...this.graveyard, this.activeEncounter],
-      turn: this.turn.nextPhase(), // encounter -> resolution
-    });
-  }
 
   /**
    * Encounter Failure Flow

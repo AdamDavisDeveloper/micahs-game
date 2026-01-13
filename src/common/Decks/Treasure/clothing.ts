@@ -2,7 +2,7 @@ import type { ClothingCard } from '../../../engine/types/card.types';
 
 export const clothing: readonly ClothingCard[] = [
   {
-    kind: 'treasure',
+    cardClass: 'treasure',
     treasureKind: 'clothing',
     id: 'clothing:placeholder',
     name: 'Placeholder Clothing',

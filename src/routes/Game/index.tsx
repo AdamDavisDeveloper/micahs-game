@@ -1,21 +1,22 @@
-import React, { useEffect, useState, useRef } from 'react';
-import { useGameActions } from '../../hooks/useGame';
-import { createPlayerFromClass } from '../../engine/utils/playerFactory';
-import { classes } from '../../common/Decks/Characters/classes';
-import type { EncounterCard, Creature } from '../../engine/types/card.types';
+import type { Creature, EncounterCard } from '../../engine/types/card.types';
+import React, { useEffect, useRef, useState } from 'react';
+
 import type { Intention } from '../../engine/types/game.types';
+import { classes } from '../../common/Decks/Characters/classes';
+import { createPlayerFromClass } from '../../engine/utils/playerFactory';
+import { useGameActions } from '../../hooks/useGame';
 
 /**
  * Mock encounter card for testing
  */
 const mockGrumpyGoose: EncounterCard = {
-  kind: 'encounter',
+  cardClass: 'encounter',
   id: 'grumpy-goose',
   name: 'Grumpy Goose',
   targets: {
+    defense: 6,
     charm: 5,
     escape: 2,
-    attack: 8,
   },
   attack: { kind: 'dice', sides: 4, modifier: 1 }, // D4 + 1
   reward: { kind: 'none' },
@@ -146,6 +147,17 @@ const Game = () => {
   const formatStat = (statName: string, dice: readonly number[]) =>
     `${statName}: ${formatDicePool(dice)}`;
 
+  const formatDefense = (defense: EncounterCard['targets']['defense']): string => {
+    if (defense === undefined) return 'N/A';
+    if (typeof defense === 'number') return defense.toString();
+    if (defense.kind === 'static') return defense.value.toString();
+    if (defense.kind === 'dice') {
+      const modifier = defense.modifier ? ` + ${defense.modifier}` : '';
+      return `D${defense.sides}${modifier}`;
+    }
+    return 'N/A';
+  };
+
   return (
     <div>
       <h2>Game</h2>
@@ -194,7 +206,7 @@ const Game = () => {
         <div style={{ border: '1px solid #ccc', padding: '10px', marginBottom: '10px' }}>
           <h3>Encounter: {activeEncounter.name}</h3>
           <p>
-            Targets - Attack: {activeEncounter.targets.attack ?? 'N/A'} | Charm:{' '}
+            Targets - Attack (Defense): {formatDefense(activeEncounter.targets.defense)} | Charm:{' '}
             {activeEncounter.targets.charm ?? 'N/A'} | Escape:{' '}
             {activeEncounter.targets.escape ?? 'N/A'}
           </p>
@@ -223,13 +235,13 @@ const Game = () => {
         {phase === 'encounter' && activeEncounter && (
           <div>
             <h4>Select Intention:</h4>
-            {activeEncounter.targets.attack !== undefined && (
+            {activeEncounter.targets.defense !== undefined && (
               <button
                 onClick={() => handleSelectIntention('attack')}
                 disabled={selectedIntention === 'attack'}
                 style={{ marginRight: '10px' }}
               >
-                Attack (target: {activeEncounter.targets.attack})
+                Attack (defense: {formatDefense(activeEncounter.targets.defense)})
               </button>
             )}
             {activeEncounter.targets.charm !== undefined && (
@@ -287,6 +299,13 @@ const Game = () => {
             <p>
               Companion Roll: {lastRollResult.companionRoll.rolls.map((r) => r.value).join(' + ')} ={' '}
               {lastRollResult.companionRoll.total}
+            </p>
+          )}
+          {lastRollResult.defenseRoll && (
+            <p>
+              Defense Roll: {lastRollResult.defenseRoll.rolls.map((r) => r.value).join(' + ')}
+              {lastRollResult.defenseRoll.staticBonus > 0 && ` + ${lastRollResult.defenseRoll.staticBonus}`}
+              = {lastRollResult.defenseRoll.total}
             </p>
           )}
           <p>Target: {lastRollResult.target}</p>

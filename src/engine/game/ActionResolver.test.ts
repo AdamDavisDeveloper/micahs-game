@@ -31,10 +31,10 @@ function basePlayer(overrides: Partial<Player> = {}): Player {
 
 test('ActionResolver (attack): success sends encounter to graveyard and enters resolution', () => {
   const encounter: EncounterCard = {
-    kind: 'encounter',
+    cardClass: 'encounter',
     id: 'e1',
     name: 'Training Dummy',
-    targets: { attack: 6, charm: 6, escape: 2 },
+    targets: { defense: 6, charm: 6, escape: 2 },
     reward: { kind: 'coin', amount: 3 },
   };
 
@@ -63,10 +63,10 @@ test('ActionResolver (attack): success sends encounter to graveyard and enters r
 
 test('ActionResolver (attack): failure deals damage, shuffles back, companion lives', () => {
   const encounter: EncounterCard = {
-    kind: 'encounter',
+    cardClass: 'encounter',
     id: 'e2',
     name: 'Mean Creature',
-    targets: { attack: 6 },
+    targets: { defense: 6 },
     attack: { kind: 'dice', sides: 4 }, // uses RNG
   };
 

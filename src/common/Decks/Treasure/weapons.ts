@@ -3,7 +3,7 @@ import { classIs } from '../../../engine/types/effect.types';
 
 export const weapons: readonly WeaponCard[] = [
   {
-    kind: 'treasure',
+    cardClass: 'treasure',
     treasureKind: 'weapon',
     id: 'weapon:red-katana',
     name: 'Red Katana',

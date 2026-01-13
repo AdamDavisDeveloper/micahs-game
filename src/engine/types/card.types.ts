@@ -1,4 +1,5 @@
 import type { ClassId, ConditionalEffectSpec, EffectSpec } from './effect.types';
+
 import type { DieSides } from './dice.types';
 
 export type CardId = string;
@@ -6,9 +7,11 @@ export type CardId = string;
 export type WeatherId = 'sunny' | 'foggy' | 'storming' | 'snowing';
 
 export type WeatherCard = {
-  kind: 'weather';
+  cardClass: 'weather';
+  kind?: string; // Sub-class of weather card (e.g., "Sunny", "Stormy", etc.)
   id: WeatherId;
   name: string;
+  description?: string;
   effects: readonly EffectSpec[];
   conditionals: readonly ConditionalEffectSpec[];
 };
@@ -16,6 +19,8 @@ export type WeatherCard = {
 export type Creature = {
   id: CardId;
   name: string;
+  kind?: string; // Sub-class of creature (e.g., "Creature", "Traveler", "Uncharmable", etc.)
+  description?: string;
   attackDice: readonly DieSides[];
   defense: number;
 
@@ -25,10 +30,12 @@ export type Creature = {
 export type TreasureKind = 'weapon' | 'clothing' | 'singleUse';
 
 export type TreasureCardBase = {
-  kind: 'treasure';
+  cardClass: 'treasure';
   treasureKind: TreasureKind;
+  kind?: string; // Sub-class of treasure card (e.g., "Weapon", "Armor", etc.)
   id: CardId;
   name: string;
+  description?: string;
   sellValue: number;
   merchantPrice: number;
 };
@@ -55,25 +62,32 @@ export type TreasureCard = WeaponCard | ClothingCard | SingleUseCard;
 
 export type EncounterTarget = {
   attack?: number;
+  defense?: number | { kind: 'dice'; sides: number; modifier?: number } | { kind: 'static'; value: number };
   charm?: number;
   escape?: number;
 };
 
 export type EncounterReward =
   | { kind: 'coin'; amount: number }
-  | { kind: 'none' };
+  | { kind: 'treasure', amount: number }
+  | { kind: 'none' }
 
 export type EncounterCard = {
-  kind: 'encounter';
+  cardClass: 'encounter';
+  kind?: string; // Sub-class of encounter (e.g., "Creature", "Traveler", "Uncharmable", etc.)
   id: CardId;
   name: string;
+  description?: string;
 
   // Enemy attack used on failure
   attack?: { kind: 'dice'; sides: number; modifier?: number } | { kind: 'static'; value: number };
 
   /**
    * Targets are per-intention.
-   * If a target is omitted, treat it as "not supported" (ActionResolver will throw).
+   * - `defense` is required and used for attack intention (player's attack must meet/exceed this)
+   *   - Can be a static number or a dice roll (e.g., { kind: 'dice', sides: 10 })
+   * - `charm` and `escape` are optional and used for their respective intentions
+   * - If a target is omitted for a supported intention, ActionResolver will throw.
    */
   targets: EncounterTarget;
 
@@ -91,4 +105,10 @@ export type EncounterCard = {
     creature: Creature;
     reward?: EncounterReward;
   };
+
+  /**
+   * If present, changes the weather when this encounter is revealed.
+   * Only specific encounters have this effect (e.g., Siren triggers Fog).
+   */
+  weatherChange?: WeatherId;
 };

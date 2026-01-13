@@ -3,7 +3,7 @@ import type { Player } from '../types/player.types';
 import { GameState } from './GameState';
 
 const weapon: WeaponCard = {
-  kind: 'treasure',
+  cardClass: 'treasure',
   treasureKind: 'weapon',
   id: 'weapon:test',
   name: 'Test Sword',

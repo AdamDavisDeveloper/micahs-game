@@ -30,7 +30,7 @@ export class InventorySystem {
 
   static equipWeapon(player: Player, weaponId: string): Player {
     const { next: invWithout, removed } = removeFirstById(player.inventory, weaponId);
-    if (!removed || removed.kind !== 'treasure' || removed.treasureKind !== 'weapon') return player;
+    if (!removed || removed.cardClass !== 'treasure' || removed.treasureKind !== 'weapon') return player;
 
     const weapon = removed as WeaponCard;
     const returned = player.equippedWeapon ? [player.equippedWeapon] : [];
@@ -44,7 +44,7 @@ export class InventorySystem {
 
   static equipClothing(player: Player, clothingId: string): Player {
     const { next: invWithout, removed } = removeFirstById(player.inventory, clothingId);
-    if (!removed || removed.kind !== 'treasure' || removed.treasureKind !== 'clothing') return player;
+    if (!removed || removed.cardClass !== 'treasure' || removed.treasureKind !== 'clothing') return player;
 
     const clothing = removed as ClothingCard;
     const returned = player.wornClothing ? [player.wornClothing] : [];

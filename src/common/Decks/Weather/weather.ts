@@ -3,7 +3,7 @@ import { classIs } from '../../../engine/types/effect.types';
 
 export const weather: Record<string, WeatherCard> = {
   sunny: {
-    kind: 'weather',
+    cardClass: 'weather',
     id: 'sunny',
     name: 'Sunny',
     effects: [
@@ -17,7 +17,7 @@ export const weather: Record<string, WeatherCard> = {
   },
 
   foggy: {
-    kind: 'weather',
+    cardClass: 'weather',
     id: 'foggy',
     name: 'Foggy',
     effects: [{ effect: { kind: 'stat.modifier.add', stat: 'speed', amount: -2 }, repeat: 'once' }],
@@ -25,7 +25,7 @@ export const weather: Record<string, WeatherCard> = {
   },
 
   storming: {
-    kind: 'weather',
+    cardClass: 'weather',
     id: 'storming',
     name: 'Storming',
     effects: [],
@@ -33,7 +33,7 @@ export const weather: Record<string, WeatherCard> = {
   },
 
   snowing: {
-    kind: 'weather',
+    cardClass: 'weather',
     id: 'snowing',
     name: 'Snowing',
     effects: [{ effect: { kind: 'hp.add', amount: -1 }, repeat: 'eachTurnStart' }],

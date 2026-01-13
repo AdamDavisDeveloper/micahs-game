@@ -1,9 +1,9 @@
-import type { Intention } from '../types/game.types';
+import { DiceSystem } from '../systems/DiceSystem';
 import type { EncounterCard } from '../types/card.types';
+import { GameState } from './GameState';
+import type { Intention } from '../types/game.types';
 import type { Player } from '../types/player.types';
 import type { RollResult } from '../types/dice.types';
-import { DiceSystem } from '../systems/DiceSystem';
-import { GameState } from './GameState';
 
 type Rng = () => number;
 
@@ -15,13 +15,54 @@ export type ResolutionOutcome = {
   target: number;
   success: boolean;
 
+  // Defense roll (only present for attack intention when defense is a dice roll)
+  defenseRoll?: RollResult;
+
   // Only present on failure when encounter attacks
   encounterAttackRoll?: RollResult;
   damageTaken?: number;
   companionDied?: boolean;
 };
 
+function rollEncounterDefense(encounter: EncounterCard, rng: Rng): RollResult {
+  const { defense } = encounter.targets;
+  if (!defense) {
+    throw new Error(`Encounter ${encounter.id} has no defense target`);
+  }
+
+  if (typeof defense === 'number') {
+    // Static value (backward compatibility)
+    return { total: defense, rolls: [], staticBonus: 0 };
+  }
+
+  if (defense.kind === 'static') {
+    return { total: defense.value, rolls: [], staticBonus: 0 };
+  }
+
+  // dice
+  const die = DiceSystem.rollDie(defense.sides, rng);
+  const staticBonus = defense.modifier ?? 0;
+  return {
+    total: die + staticBonus,
+    rolls: [{ dieSides: defense.sides, value: die }],
+    staticBonus,
+  };
+}
+
 function getTarget(encounter: EncounterCard, intention: Intention): number {
+  if (intention === 'attack') {
+    if (encounter.targets.defense === undefined) {
+      throw new Error(`Encounter ${encounter.id} has no defense target for attack intention`);
+    }
+    // If it's a static number, return it directly
+    if (typeof encounter.targets.defense === 'number') {
+      return encounter.targets.defense;
+    }
+    // If it's a dice roll, we'll handle it in resolveActiveEncounter
+    // For now, throw an error (this will be handled by rolling in resolveActiveEncounter)
+    throw new Error('Defense dice rolls must be handled in resolveActiveEncounter');
+  }
+
   const t = encounter.targets[intention];
   if (t === undefined) throw new Error(`Encounter ${encounter.id} has no target for intention: ${intention}`);
   return t;
@@ -63,6 +104,11 @@ function applyReward(player: Player, reward: EncounterCard['reward']): Player {
   switch (reward.kind) {
     case 'coin':
       return { ...player, coin: player.coin + reward.amount };
+    case 'treasure':
+      // TODO: Implement treasure card drawing logic
+      // For now, just return player unchanged
+      // You'll need to add treasure cards to player's inventory
+      return player;
     default: {
       const _exhaustive: never = reward;
       return _exhaustive;
@@ -80,7 +126,27 @@ export class ActionResolver {
     if (state.getPhase() !== 'encounter') throw new Error('Must be in encounter phase to resolve');
 
     const player = state.getActivePlayer();
-    const target = getTarget(encounter, intention);
+
+    // For attack intention, roll defense if it's a dice roll
+    let target: number;
+    let defenseRoll: RollResult | undefined;
+
+    if (intention === 'attack') {
+      if (encounter.targets.defense === undefined) {
+        throw new Error(`Encounter ${encounter.id} has no defense target for attack intention`);
+      }
+
+      if (typeof encounter.targets.defense === 'number') {
+        // Static defense value
+        target = encounter.targets.defense;
+      } else {
+        // Dice roll defense
+        defenseRoll = rollEncounterDefense(encounter, rng);
+        target = defenseRoll.total;
+      }
+    } else {
+      target = getTarget(encounter, intention);
+    }
 
     const { playerRoll, companionRoll, total } = rollForIntention(player, intention, rng);
     const success = total >= target;
@@ -90,7 +156,7 @@ export class ActionResolver {
       const nextState = state.resolveEncounterAndShuffleBack();
       return {
         state: nextState,
-        outcome: { intention, playerRoll, companionRoll, total, target, success },
+        outcome: { intention, playerRoll, companionRoll, total, target, success, defenseRoll },
       };
     }
 
@@ -109,11 +175,11 @@ export class ActionResolver {
 
         return {
           state: nextState,
-          outcome: { intention, playerRoll, companionRoll, total, target, success },
+          outcome: { intention, playerRoll, companionRoll, total, target, success, defenseRoll },
         };
       }
 
-      // Attack success (and any other future “non-charm” success): to graveyard + reward
+      // Attack success (and any other future "non-charm" success): to graveyard + reward
       const rewardedPlayer = applyReward(player, encounter.reward);
       const nextState =
         rewardedPlayer === player
@@ -122,7 +188,7 @@ export class ActionResolver {
 
       return {
         state: nextState,
-        outcome: { intention, playerRoll, companionRoll, total, target, success },
+        outcome: { intention, playerRoll, companionRoll, total, target, success, defenseRoll },
       };
     }
 
@@ -151,6 +217,7 @@ export class ActionResolver {
         total,
         target,
         success,
+        defenseRoll,
         encounterAttackRoll,
         damageTaken,
         companionDied,
