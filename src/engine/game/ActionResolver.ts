@@ -98,22 +98,31 @@ function rollForIntention(player: Player, intention: Intention, rng: Rng): { pla
   return { playerRoll, companionRoll, total: playerRoll.total + companionRoll.total };
 }
 
-function applyReward(player: Player, reward: EncounterCard['reward']): Player {
-  if (!reward || reward.kind === 'none') return player;
+function applyReward(player: Player, rewards: EncounterCard['reward']): Player {
+  if (!rewards || rewards.length === 0) return player;
 
-  switch (reward.kind) {
-    case 'coin':
-      return { ...player, coin: player.coin + reward.amount };
-    case 'treasure':
-      // TODO: Implement treasure card drawing logic
-      // For now, just return player unchanged
-      // You'll need to add treasure cards to player's inventory
-      return player;
-    default: {
-      const _exhaustive: never = reward;
-      return _exhaustive;
+  let updatedPlayer = player;
+
+  for (const reward of rewards) {
+    if (reward.kind === 'none') continue;
+
+    switch (reward.kind) {
+      case 'coin':
+        updatedPlayer = { ...updatedPlayer, coin: updatedPlayer.coin + reward.amount };
+        break;
+      case 'treasure':
+        // TODO: Implement treasure card drawing logic
+        // For now, just continue (player unchanged for treasure)
+        // You'll need to add treasure cards to player's inventory
+        break;
+      default: {
+        const _exhaustive: never = reward;
+        return _exhaustive;
+      }
     }
   }
+
+  return updatedPlayer;
 }
 
 export class ActionResolver {
@@ -170,7 +179,9 @@ export class ActionResolver {
           creatureDock: [...player.creatureDock, encounter.charm.creature],
         };
 
-        const rewarded = applyReward(withCreature, encounter.charm.reward ?? encounter.reward);
+        // Only apply reward if charm has a specific reward defined
+        const charmReward = encounter.charm.reward ? [encounter.charm.reward] : undefined;
+        const rewarded = applyReward(withCreature, charmReward);
         const nextState = state.updatePlayer(rewarded).resolveEncounterCleared();
 
         return {

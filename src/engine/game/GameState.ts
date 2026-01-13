@@ -225,6 +225,18 @@ export class GameState {
     });
   }
 
+  resolveEncounterToGraveyard(): GameState {
+    if (this.turn.getPhase() !== 'encounter') throw new Error('Can only resolve during encounter phase');
+    if (!this.activeEncounter) throw new Error('No active encounter to resolve');
+
+    return new GameState({
+      ...this.cloneArgs(),
+      activeEncounter: undefined,
+      graveyard: [...this.graveyard, this.activeEncounter],
+      turn: this.turn.nextPhase(), // encounter -> resolution
+    });
+  }
+
    equipWeaponFromInventory(weaponId: string): GameState {
     if (this.turn.getPhase() !== 'preparation') throw new Error('Can only equip during preparation');
     if (this.activeEncounter) throw new Error('Cannot equip with an active encounter');

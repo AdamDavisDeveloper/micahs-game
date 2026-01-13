@@ -5,6 +5,8 @@ import type { Intention } from '../../engine/types/game.types';
 import { classes } from '../../common/Decks/Characters/classes';
 import { createPlayerFromClass } from '../../engine/utils/playerFactory';
 import { useGameActions } from '../../hooks/useGame';
+import { OriginDeck } from '../../common/Decks/Encounters/OriginDeck';
+import { shuffle } from '../../engine/utils/deck';
 
 /**
  * Mock encounter card for testing
@@ -19,7 +21,7 @@ const mockGrumpyGoose: EncounterCard = {
     escape: 2,
   },
   attack: { kind: 'dice', sides: 4, modifier: 1 }, // D4 + 1
-  reward: { kind: 'none' },
+  reward: [],
   charm: {
     creature: {
       id: 'silly-goose',
@@ -28,7 +30,6 @@ const mockGrumpyGoose: EncounterCard = {
       defense: 2,
       effects: [{ effect: { kind: 'coin.add', amount: 1 }, repeat: 'eachTurnStart' }],
     } as Creature,
-    reward: { kind: 'none' },
   },
 };
 
@@ -76,7 +77,8 @@ const Game = () => {
 
         initializeGame({
           players: [player],
-          encounterDeck: [mockGrumpyGoose],
+          encounterDeckSpec: OriginDeck,
+          shuffler: (cards) => shuffle(cards, Math.random),
         });
 
         // Start the first turn
@@ -158,6 +160,16 @@ const Game = () => {
     return 'N/A';
   };
 
+  const formatAttack = (attack: EncounterCard['attack']): string => {
+    if (attack === undefined) return 'N/A';
+    if (attack.kind === 'static') return attack.value.toString();
+    if (attack.kind === 'dice') {
+      const modifier = attack.modifier ? ` + ${attack.modifier}` : '';
+      return `D${attack.sides}${modifier}`;
+    }
+    return 'N/A';
+  };
+
   return (
     <div>
       <h2>Game</h2>
@@ -206,10 +218,13 @@ const Game = () => {
         <div style={{ border: '1px solid #ccc', padding: '10px', marginBottom: '10px' }}>
           <h3>Encounter: {activeEncounter.name}</h3>
           <p>
-            Targets - Attack (Defense): {formatDefense(activeEncounter.targets.defense)} | Charm:{' '}
+            Targets - Defense: {formatDefense(activeEncounter.targets.defense)} | Charm:{' '}
             {activeEncounter.targets.charm ?? 'N/A'} | Escape:{' '}
             {activeEncounter.targets.escape ?? 'N/A'}
           </p>
+          {activeEncounter.attack && (
+            <p>Attack (on failure): {formatAttack(activeEncounter.attack)}</p>
+          )}
           {activeEncounter.charm && (
             <p>✨ Charmable: Becomes {activeEncounter.charm.creature.name} when charmed</p>
           )}
@@ -306,6 +321,13 @@ const Game = () => {
               Defense Roll: {lastRollResult.defenseRoll.rolls.map((r) => r.value).join(' + ')}
               {lastRollResult.defenseRoll.staticBonus > 0 && ` + ${lastRollResult.defenseRoll.staticBonus}`}
               = {lastRollResult.defenseRoll.total}
+            </p>
+          )}
+          {lastRollResult.encounterAttackRoll && (
+            <p>
+              Encounter Attack: {lastRollResult.encounterAttackRoll.rolls.map((r) => r.value).join(' + ')}
+              {lastRollResult.encounterAttackRoll.staticBonus > 0 && ` + ${lastRollResult.encounterAttackRoll.staticBonus}`}
+              = {lastRollResult.encounterAttackRoll.total}
             </p>
           )}
           <p>Target: {lastRollResult.target}</p>

@@ -95,7 +95,7 @@ export type EncounterCard = {
    * Minimal, safe reward model for now: coin only.
    * Later I'll add treasure draws, weather changes, special effects, etc.
    */
-  reward?: EncounterReward;
+  reward?: EncounterReward[];
 
   /**
    * If present, this encounter supports Charm:

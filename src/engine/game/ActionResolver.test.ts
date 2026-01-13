@@ -35,7 +35,7 @@ test('ActionResolver (attack): success sends encounter to graveyard and enters r
     id: 'e1',
     name: 'Training Dummy',
     targets: { defense: 6, charm: 6, escape: 2 },
-    reward: { kind: 'coin', amount: 3 },
+    reward: [{ kind: 'coin', amount: 3 }],
   };
 
   const state = GameState.create({
