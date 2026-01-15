@@ -14,6 +14,9 @@ const App = () => (
         <li>
           <Link to="/game">Game</Link>
         </li>
+        <li>
+          <Link to="/AnimLab">Animation Lab</Link>
+        </li>
       </ul>
     </nav>
     <Router />
