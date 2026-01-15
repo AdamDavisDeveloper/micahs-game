@@ -5,6 +5,7 @@ export type Condition = { kind: 'classIs'; classId: ClassId };
 
 export type Effect =
   | { kind: 'hp.add'; amount: number }
+  | { kind: 'hp.die.add'; sides: number; modifier: number }
   | { kind: 'coin.add'; amount: number }
   | { kind: 'stat.die.upgrade'; stat: StatKey; steps: number }
   | { kind: 'stat.modifier.add'; stat: StatKey; amount: number };

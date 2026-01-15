@@ -27,7 +27,7 @@ export type Creature = {
   effects?: readonly EffectSpec[]; // Optional passive effects (ex: +1 coin each turn start)
 };
 
-export type TreasureKind = 'weapon' | 'clothing' | 'singleUse';
+export type TreasureKind = 'weapon' | 'clothing' | 'singleUse' | 'upgrade';
 
 export type TreasureCardBase = {
   cardClass: 'treasure';
@@ -53,12 +53,18 @@ export type ClothingCard = TreasureCardBase & {
   effects: readonly EffectSpec[];
 };
 
+export type UpgradeCard = TreasureCardBase & {
+  treasureKind: 'upgrade';
+  effects: readonly EffectSpec[];
+};
+
+
 export type SingleUseCard = TreasureCardBase & {
   treasureKind: 'singleUse';
   effects: readonly EffectSpec[];
 };
 
-export type TreasureCard = WeaponCard | ClothingCard | SingleUseCard;
+export type TreasureCard = WeaponCard | ClothingCard | SingleUseCard | UpgradeCard;
 
 export type EncounterTarget = {
   attack?: number;

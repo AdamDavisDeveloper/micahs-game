@@ -11,6 +11,7 @@ export type GameAction =
   | { kind: 'equipItem' }
   | { kind: 'useItem' }
   | { kind: 'assignCompanion' };
+  | { kind: 'removeCompanion' };
 
 export class GameRules {
   /**
@@ -41,6 +42,7 @@ export class GameRules {
       case 'equipItem':
       case 'useItem':
       case 'assignCompanion':
+      case 'removeCompanion':
         return phase === 'preparation' && !hasEncounter;
 
       default: {
