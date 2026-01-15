@@ -22,6 +22,11 @@ When contributing code to this project as an approved collaborator, you have per
 Follow these steps - I will keep updated if anything changes.
 
 #### Start Vite dev server with yarn
-1. If you haven't done this already, run `yarn` in your terminal to fetch required packages <i>(note: if you don't have yarn, just install it globally on your machine the same way as you would with npm).</i>
-2. run `yarn run dev` which should start the dev server with hot-module-reload.
-3. Open browser to the localhost:PORT url found in the server terminal
+1. If you haven't done this already, in the root of this project, run `yarn` in your terminal to fetch required packages <i>(note: if you don't have yarn, just install it globally on your machine the same way as you would with npm).</i>
+2. In the root of this project, run `yarn run dev` which should start the dev server with hot-module-reload.
+3. Open browser to the `localhost:PORT` url found in the server terminal
+
+#### See Your Changes
+- I added a route called AnimLab which is linked on the `/` home route. `localhost:PORT/AnimLab` is where you can see your changes.
+- You can make edits to the React page UI and see your changes by editing the file in: `routes/AnimLab/index.tsx` -- you can import your animation code to that file for viewing.
+This might seem odd to keep the animation code and the animation testing lab UI code in two completely different places but this pattern allows for better separation of concerns and will guide us into creating a resusable animation library.

@@ -3,6 +3,7 @@ import React, { FunctionComponent, lazy, Suspense } from 'react';
 import { Routes, Route } from 'react-router-dom';
 
 import Home from './Home';
+import AnimLab from './AnimLab';
 
 const Game = lazy(() => import('./Game'));
 
@@ -16,6 +17,10 @@ const Router: FunctionComponent = () => (
           <Game />
         </Suspense>
       }
+    />
+    <Route
+      path="/AnimLab"
+      element={<AnimLab />}
     />
   </Routes>
 );
