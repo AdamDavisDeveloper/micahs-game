@@ -10,7 +10,7 @@
 ## Dev Contribution Guide
 When contributing code to this project as an approved collaborator, you have permissions to commit code, create/delete branches, etc., and it'll be helpful to know exactly what to do.
 
-#### Genral Guidelines:
+#### General Guidelines:
 1. Commit code often to keep commits small and easy to understand.
 2. Use good commit messages - Explain what changed
 3. Always commit changes to the `animations` branch
