@@ -26,61 +26,6 @@ In the project directory, you can run:
 
 ##### `yarn test`
 
-## Development
-
-### Folder Structure
-
-Folder structure should look like this:
-
-```
-src/
-├── App.test.tsx
-├── App.tsx
-├── main.tsx
-├── setupTests.ts
-├── test-utils.ts
-├── vite-env.d.ts
-├── assets
-│   ├── %image%.jpg
-│   └── %icon%.svg
-├── common
-│   ├── request.ts
-│   └── %util_name%.ts
-├── components
-│   ├── partials
-│   │   └── %ModuleName%
-│   │       ├── %ParticalName%.tsx
-│   │       ├── %ParticalName%.test.tsx
-│   │       └── %ParticalName%.scss
-│   └── shareds
-│       └── %ParticalName%
-│           ├── %ParticalName%.tsx
-│           ├── %ParticalName%.test.tsx
-│           └── %ParticalName%.scss
-├── routes
-│   ├── %ModuleName%
-│   │   ├── index.tsx
-│   │   ├── index.scss
-│   │   ├── %ModuleRouteName%
-│   │   │   ├── index.tsx
-│   │   │   ├── %ModuleRouteName%.test.tsx
-│   │   │   └── %ModuleRouteName%.scss
-│   │   └── %ModuleRouteName%
-│   │       ├── index.tsx
-│   │       ├── %ModuleRouteName%.test.tsx
-│   │       └── %ModuleRouteName%.scss
-│   └── index.tsx (router)
-├── store
-│   ├── slices
-│   │   ├── %module-name%.slice.ts
-│   │   └── %module-name%.slice.ts
-│   ├── hooks.ts
-│   └── index.ts
-└── styles
-    ├── global.scss
-    └── vendors.scss
-```
-
 ### State Management
 
 Redux was used for state management in the project. It is divided into redux slices to avoid complexity, ensure maintainability, and divide into domains. Use store (redux) for global states, states that you will use at many different points, and states that you will access and manage remotely.
