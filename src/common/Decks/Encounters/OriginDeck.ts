@@ -362,4 +362,106 @@ export const OriginDeck: DeckEntry<EncounterCard>[] = [
     },
     count: 0, // Setting to 0 since this card can't be played with the current engine
   },
+
+  {
+    card: {
+      cardClass: 'encounter',
+      kind: "Creature",
+      id: 'goblin-king',
+      name: 'Goblin King',
+      targets: {
+        charm: 15, // +5 charm modifier for each Goblin in player's dock
+        defense: 14,
+        escape: 2,
+      },
+      attack: { kind: 'dice', sides: 12 }, // +5 modifier if player has 20+ coin
+      reward: [{ kind: 'treasure', amount: 2 }],
+      charm: {
+        creature: {
+          id: 'goblin-king',
+          name: 'Goblin King',
+          attackDice: [12],
+          defense: 14,
+        } as Creature,
+      },
+    },
+    count: 1,
+  },
+
+  {
+    card: {
+      cardClass: 'encounter',
+      kind: "Creature",
+      id: 'yeti',
+      name: 'Yeti',
+      targets: {
+        charm: 8,
+        defense: 5,
+        escape: 2, // +2 when Snowing
+      },
+      attack: { kind: 'dice', sides: 4, modifier: 2 }, // +2 when Snowing
+      reward: [{ kind: 'coin', amount: 6 }],
+      weatherChange: 'Snowing',
+      charm: {
+        creature: {
+          id: 'yeti',
+          name: 'Yeti',
+          attackDice: [4], // add modifier option for +2
+          defense: 5,
+        } as Creature,
+      },
+    },
+    count: 2,
+  },
+
+  {
+    card: {
+      cardClass: 'encounter',
+      kind: "Traveller",
+      id: 'tempestarius',
+      name: 'Tempestarius',
+      targets: {
+        charm: 8, // or pay 14 coin
+        defense: 7,
+        escape: 2,
+      },
+      attack: { kind: 'dice', sides: 12 },
+      reward: [{ kind: 'coin', amount: 6 }],
+      charm: {
+        creature: {
+          id: 'tempestarius',
+          name: 'Tempestarius',
+          attackDice: [12],
+          defense: 7,
+        } as Creature,
+        // Companion Bonus: pay 6 coin at any time during prep or encounter phase to cancel the weather
+      },
+    },
+    count: 2,
+  },
+
+  {
+    card: {
+      cardClass: 'encounter',
+      kind: "Creature",
+      id: 'snow-golem',
+      name: 'Snow Golem',
+      targets: {
+        charm: 4,
+        defense: 3, // Instant defeat when Sunny
+        escape: 5,
+      },
+      attack: { kind: 'dice', sides: 4 }, // +2 modifier when Snowing
+      reward: [{ kind: 'treasure', amount: 1 }],
+      charm: {
+        creature: {
+          id: 'snow-golem',
+          name: 'Snow Golem',
+          attackDice: [4],
+          defense: 3,
+        } as Creature,
+      },
+    },
+    count: 3,
+  },
 ];

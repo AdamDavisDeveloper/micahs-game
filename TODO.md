@@ -4,3 +4,6 @@
   if the Companion ever dies.
 
 
+
+#### Issues
+Effect display in the companion dock shows: Effects: [object Object]
