@@ -10,4 +10,14 @@ export const clothing: readonly ClothingCard[] = [
     sellValue: 0,
     merchantPrice: 9,
   },
+
+  {
+    cardClass: 'treasure',
+    treasureKind: 'clothing',
+    id: 'clothing:jetpack',
+    name: 'Jetpack',
+    effects: [{ kind: 'stat.die.upgrade', stat: 'Speed', steps: 2 }],
+    merchantPrice: 11,
+    sellValue: 7,
+  },
 ];
