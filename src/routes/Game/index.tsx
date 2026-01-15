@@ -7,6 +7,7 @@ import { createPlayerFromClass } from '../../engine/utils/playerFactory';
 import { useGameActions } from '../../hooks/useGame';
 import { OriginDeck } from '../../common/Decks/Encounters/OriginDeck';
 import { shuffle } from '../../engine/utils/deck';
+import { CompanionManager } from '../../components/CompanionManager';
 
 /**
  * Mock encounter card for testing
@@ -55,6 +56,8 @@ const Game = () => {
     initializeGame,
     startTurn,
     drawEncounter,
+    assignCompanion,
+    removeCompanion,
     endTurn,
   } = useGameActions();
 
@@ -127,6 +130,24 @@ const Game = () => {
       startTurn();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to end turn');
+    }
+  };
+
+  const handleAssignCompanion = (creatureId: string) => {
+    try {
+      setError(null);
+      assignCompanion(creatureId);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to assign companion');
+    }
+  };
+
+  const handleRemoveCompanion = () => {
+    try {
+      setError(null);
+      removeCompanion();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to remove companion');
     }
   };
 
@@ -237,9 +258,23 @@ const Game = () => {
 
         {phase === 'preparation' && (
           <div>
+            {/* Companion Management - shown only with no active encounter */}
+
+            {!activeEncounter && currentPlayer && (
+              <div style={{ border: '1px solid #ccc', padding: '10px', marginBottom: '10px' }}>
+                <CompanionManager
+                  player={currentPlayer}
+                  onAssignCompanion={handleAssignCompanion}
+                  onRemoveCompanion={handleRemoveCompanion}
+                  canModify={true}
+                />
+              </div>
+            )}
+
             <button onClick={handleDrawEncounter} disabled={!!activeEncounter}>
               Draw Encounter
             </button>
+
             <p style={{ fontSize: '12px', color: '#666' }}>
               (Preparation Phase: You can shop, trade, equip items here. For now, just draw an
               encounter.)
@@ -250,6 +285,7 @@ const Game = () => {
         {phase === 'encounter' && activeEncounter && (
           <div>
             <h4>Select Intention:</h4>
+
             {activeEncounter.targets.defense !== undefined && (
               <button
                 onClick={() => handleSelectIntention('attack')}
@@ -259,6 +295,7 @@ const Game = () => {
                 Attack (defense: {formatDefense(activeEncounter.targets.defense)})
               </button>
             )}
+
             {activeEncounter.targets.charm !== undefined && (
               <button
                 onClick={() => handleSelectIntention('charm')}
@@ -268,6 +305,7 @@ const Game = () => {
                 Charm (target: {activeEncounter.targets.charm})
               </button>
             )}
+
             {activeEncounter.targets.escape !== undefined && (
               <button
                 onClick={() => handleSelectIntention('escape')}

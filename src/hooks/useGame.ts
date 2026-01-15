@@ -168,6 +168,34 @@ export function useGameEngine() {
     dispatch(endGame());
   }, [dispatch]);
 
+  /**
+   * Assign a creature from the player's dock as their active companion.
+   */
+  const assignCompanion = useCallback(
+    (creatureId: string) => {
+      const state = gameStateRef.current;
+      if (!state) throw new Error("Game not initialized");
+
+      const newState = state.assignCompanion(creatureId);
+      gameStateRef.current = newState;
+      syncToRedux();
+    },
+    [syncToRedux],
+  );
+
+  /**
+   * Remove the active companion (returns it to the creature dock).
+   */
+  const removeCompanion = useCallback(() => {
+    const state = gameStateRef.current;
+    if (!state) throw new Error("Game not initialized");
+
+    const newState = state.removeCompanion();
+    gameStateRef.current = newState;
+    syncToRedux();
+  }, [syncToRedux]);
+
+
   return {
     initializeGame,
     startTurn,
@@ -176,6 +204,8 @@ export function useGameEngine() {
     endTurn,
     updatePlayer,
     setWeather,
+    assignCompanion,
+    removeCompanion,
     getGameState,
     quitGame,
   };
@@ -261,4 +291,5 @@ export function useDiceRoll() {
   return {
     rollDie,
   };
+
 }

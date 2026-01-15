@@ -267,6 +267,33 @@ export class GameState {
     return this.updatePlayer(afterEffects);
   }
 
+  assignCompanion(creatureId: string): GameState {
+    if (this.turn.getPhase() !== 'preparation') throw new Error('Can only assign companion during preparation');
+    if (this.activeEncounter) throw new Error('Cannot assign companion with an active encounter');
+
+    const player = this.getActivePlayer();
+    const creature = player.creatureDock.find((c) => c.id === creatureId);
+    if (!creature) throw new Error(`Creature not found in dock: ${creatureId}`);
+
+    const updated = InventorySystem.assignCompanion(player, creatureId);
+    if (updated === player) return this;
+
+    return this.updatePlayer(updated);
+  }
+
+  removeCompanion(): GameState {
+    if (this.turn.getPhase() !== 'preparation') throw new Error('Can only remove companion during preparation');
+    if (this.activeEncounter) throw new Error('Cannot remove companion with an active encounter');
+
+    const player = this.getActivePlayer();
+    if (!player.companion) throw new Error('No companion to remove');
+
+    const updated = InventorySystem.removeCompanion(player);
+    if (updated === player) return this;
+
+    return this.updatePlayer(updated);
+  }
+
   // ----- internal -----
 
   private cloneArgs() {

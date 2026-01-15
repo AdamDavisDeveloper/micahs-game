@@ -213,7 +213,12 @@ export class ActionResolver {
     let companionDied = false;
     if (player.companion && encounterAttackRoll.total >= player.companion.defense) {
       companionDied = true; // tragedy!! :c
-      nextPlayer = { ...nextPlayer, companion: undefined };
+      const deadCompanionId = player.companion.id;
+      nextPlayer = {
+        ...nextPlayer,
+        companion: undefined,
+        creatureDock: nextPlayer.creatureDock.filter((creature) => creature.id !== deadCompanionId),
+      };
     }
 
     // Update player, then shuffle encounter back and advance to resolution
