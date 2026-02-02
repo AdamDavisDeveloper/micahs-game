@@ -32,6 +32,31 @@
 	background: radial-gradient(circle at 50% 50%, #2c3e50, #000000 80%);
 }
 
+#image1 {
+	position: absolute;
+	width: 1000px;
+	height: auto;
+	transform:translateX(1000px) translateY(-2600px) translateZ(0px) rotateX(90deg) rotateY(0deg) rotateZ(180deg);
+}
+#image2 {
+	position: absolute;
+	width: 1000px;
+	height: auto;
+	transform:translateX(3800px) translateY(0px) translateZ(-200px) rotateX(90deg) rotateY(90deg) rotateZ(180deg);
+}	
+#image3 {
+	position: absolute;
+	width: 1000px;
+	height: auto;
+	transform:translateX(-2200px) translateY(0px) translateZ(0px) rotateX(90deg) rotateY(90deg) rotateZ(180deg);
+}
+#image4 {
+	position: absolute;
+	width: 1000px;
+	height: auto;
+	transform:translateX(500px) translateY(2800px) translateZ(0px) rotateX(90deg) rotateY(0deg) rotateZ(180deg);
+}
+
 .dice-cube {
 	position: absolute;
 	top: clamp(400px, (calc(80vw - 100px)), 1400px);

@@ -1,6 +1,9 @@
 import { useRef, useEffect, useState } from 'react';
 import './Dice.scss';
-
+import image1 from '../../animations/assets/images/capinShadow.png';
+import image2 from '../../animations/assets/images/creeperPunk.png';
+import image3 from '../../animations/assets/images/scarierDude.png';
+import image4 from '../../animations/assets/images/spookyLady.png';
 interface DiceProps {
 	// Optional props for customization
 	size?: number;
@@ -58,6 +61,11 @@ export const Dice: React.FC<DiceProps> = ({
 		<div className="dice-container">
 			<div className="dice-scene" ref={sceneRef}>
 				<div className="dice-table">
+
+					<img id="image1" src={image1} alt="" />
+					<img id="image2" src={image2} alt="" />
+					<img id="image3" src={image3} alt="" />
+					<img id="image4" src={image4} alt="" />
 					<div
 						key={animationKey}
 						className="dice-cube"
