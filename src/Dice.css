@@ -1,0 +1,196 @@
+:root {
+  --animation-duration: 1.3s;
+}
+
+.dice-container {
+  position: relative;
+  background-color: black;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  perspective-origin: 50% calc(50% - 750px);
+  overflow-x: hidden;
+  perspective: 2500px;
+}
+
+.dice-scene {
+  scale: 0.5;
+  position: relative;
+  transform-style: preserve-3d;
+}
+
+.dice-table {
+  position: absolute;
+  transform-style: preserve-3d;
+  transform: translate(-50%, -50%) rotateX(90deg) rotateY(0deg) rotateZ(0deg);
+  width: clamp(1000px, 160vw, 3000px);
+  height: clamp(1000px, 160vw, 3000px);
+  border-radius: 2%;
+  border: 7px dotted rgba(233, 0, 144, 0.7);
+  box-shadow: 0 0 30px 3px rgba(233, 0, 144, 0.3);
+  background: radial-gradient(circle at 50% 50%, #2c3e50, #000000 80%);
+}
+
+.dice-cube {
+  position: absolute;
+  top: clamp(400px, 80vw - 100px, 1400px);
+  left: clamp(400px, 80vw - 100px, 1400px);
+  transform-style: preserve-3d;
+  width: 200px;
+  height: 200px;
+  transform: translateX(0px) translateY(0px) translateZ(100px) rotateX(0deg) rotateY(0deg) rotateZ(-20deg);
+  font-size: 200px;
+  animation: var(--animation-name, diceRotate1) var(--animation-duration) linear;
+}
+
+@keyframes diceRotate1 {
+  0% {
+    transform: translateX(0px) translateY(0px) translateZ(150px) rotateX(720deg) rotateY(180deg) rotateZ(180deg);
+  }
+  100% {
+    transform: translateX(0px) translateY(0px) translateZ(150px) rotateX(0deg) rotateY(0deg) rotateZ(-20deg);
+  }
+}
+@keyframes diceRotate2 {
+  0% {
+    transform: translateX(1000px) translateY(0px) translateZ(1300px) rotateX(720deg) rotateY(720deg) rotateZ(-80deg);
+  }
+  20% {
+    transform: translateX(300px) translateY(0px) translateZ(100px) rotateX(420deg) rotateY(360deg) rotateZ(-20deg);
+  }
+  27% {
+    transform: translateX(200px) translateY(0px) translateZ(205px) rotateX(360deg) rotateY(360deg) rotateZ(20deg);
+  }
+  28% {
+    transform: translateX(180px) translateY(0px) translateZ(210px) rotateX(340deg) rotateY(340deg) rotateZ(-20deg);
+  }
+  29% {
+    transform: translateX(170px) translateY(0px) translateZ(202px) rotateX(320deg) rotateY(320deg) rotateZ(-20deg);
+  }
+  37% {
+    transform: translateX(150px) translateY(0px) translateZ(100px) rotateX(240deg) rotateY(240deg) rotateZ(-20deg);
+  }
+  40% {
+    transform: translateX(140px) translateY(0px) translateZ(135px) rotateX(210deg) rotateY(210deg) rotateZ(-20deg);
+  }
+  41% {
+    transform: translateX(110px) translateY(0px) translateZ(140px) rotateX(170deg) rotateY(170deg) rotateZ(-20deg);
+  }
+  43% {
+    transform: translateX(70px) translateY(0px) translateZ(137px) rotateX(150deg) rotateY(150deg) rotateZ(-20deg);
+  }
+  47% {
+    transform: translateX(30px) translateY(0px) translateZ(100px) rotateX(110deg) rotateY(110deg) rotateZ(-20deg);
+  }
+  49% {
+    transform: translateX(17px) translateY(0px) translateZ(118px) rotateX(90deg) rotateY(90deg) rotateZ(-20deg);
+  }
+  50% {
+    transform: translateX(14px) translateY(0px) translateZ(120px) rotateX(70deg) rotateY(70deg) rotateZ(-20deg);
+  }
+  51% {
+    transform: translateX(10px) translateY(0px) translateZ(116px) rotateX(60deg) rotateY(60deg) rotateZ(-20deg);
+  }
+  52% {
+    transform: translateX(8px) translateY(0px) translateZ(100px) rotateX(50deg) rotateY(50deg) rotateZ(-20deg);
+  }
+  54% {
+    transform: translateX(5px) translateY(0px) translateZ(108px) rotateX(30deg) rotateY(30deg) rotateZ(-20deg);
+  }
+  55% {
+    transform: translateX(3px) translateY(0px) translateZ(110px) rotateX(20deg) rotateY(20deg) rotateZ(-20deg);
+  }
+  56% {
+    transform: translateX(2px) translateY(0px) translateZ(106px) rotateX(10deg) rotateY(10deg) rotateZ(-20deg);
+  }
+  57% {
+    transform: translateX(1px) translateY(0px) translateZ(100px) rotateX(0deg) rotateY(0deg) rotateZ(-20deg);
+  }
+}
+@keyframes diceRotate3 {
+  0% {
+    transform: translateX(0px) translateY(0px) translateZ(1100px) rotateX(0deg) rotateY(0deg) rotateZ(0deg);
+  }
+  21% {
+    transform: translateX(-100px) translateY(0px) translateZ(160px) rotateX(400deg) rotateY(50deg) rotateZ(-50deg);
+  }
+  48% {
+    transform: translateX(48px) translateY(0px) translateZ(330px) rotateX(30deg) rotateY(0deg) rotateZ(0deg);
+  }
+  50% {
+    transform: translateX(50px) translateY(0px) translateZ(333px) rotateX(0deg) rotateY(0deg) rotateZ(0deg);
+  }
+  53% {
+    transform: translateX(52px) translateY(0px) translateZ(331px) rotateX(-60deg) rotateY(0deg) rotateZ(0deg);
+  }
+  71% {
+    transform: translateX(200px) translateY(0px) translateZ(100px) rotateX(-330deg) rotateY(-30deg) rotateZ(30deg);
+  }
+  82% {
+    transform: translateX(38px) translateY(0px) translateZ(209px) rotateX(-20deg) rotateY(0deg) rotateZ(0deg);
+  }
+  84% {
+    transform: translateX(33px) translateY(0px) translateZ(212px) rotateX(0deg) rotateY(0deg) rotateZ(0deg);
+  }
+  85% {
+    transform: translateX(29px) translateY(0px) translateZ(205px) rotateX(30deg) rotateY(0deg) rotateZ(0deg);
+  }
+  92% {
+    transform: translateX(0px) translateY(0px) translateZ(100px) rotateX(60deg) rotateY(20deg) rotateZ(-20deg);
+  }
+  95% {
+    transform: translateX(0px) translateY(0px) translateZ(140px) rotateX(10deg) rotateY(0deg) rotateZ(0deg);
+  }
+  97% {
+    transform: translateX(0px) translateY(0px) translateZ(142px) rotateX(0deg) rotateY(0deg) rotateZ(0deg);
+  }
+  98% {
+    transform: translateX(0px) translateY(0px) translateZ(137px) rotateX(-10deg) rotateY(0deg) rotateZ(0deg);
+  }
+  100% {
+    transform: translateX(0px) translateY(0px) translateZ(100px) rotateX(0deg) rotateY(0deg) rotateZ(-20deg);
+  }
+}
+.dice-number {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: "Arial Black", sans-serif;
+  color: black;
+}
+
+.dice-panel {
+  position: absolute;
+  width: 198px;
+  height: 198px;
+  border: 2px solid rgb(255, 255, 255);
+  background-color: rgba(144, 144, 144, 0.85);
+}
+
+.dice-panel-1 {
+  transform: translateZ(100px) rotateY(0deg);
+}
+
+.dice-panel-2 {
+  transform: translateX(0px) translateY(100px) translateZ(0px) rotateX(270deg);
+}
+
+.dice-panel-3 {
+  transform: translateX(100px) translateZ(0px) rotateY(90deg) rotateZ(270deg);
+}
+
+.dice-panel-4 {
+  transform: translateX(-100px) translateZ(0px) rotateY(270deg) rotateZ(90deg);
+}
+
+.dice-panel-5 {
+  transform: translateY(-100px) translateZ(0px) rotateX(270deg) rotateY(180deg);
+}
+
+.dice-panel-6 {
+  transform: translateZ(-100px) rotateY(180deg) rotateZ(180deg);
+}
