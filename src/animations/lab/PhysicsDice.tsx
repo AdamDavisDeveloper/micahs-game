@@ -8,6 +8,9 @@ type PhysicsDiceProps = {
     diceSides?: number[];
     diceCount?: number;
     rollKey?: number;
+    collisionSoundUrl?: string;
+    collisionSoundUrls?: string[];
+    collisionVolume?: number;
     onResults?: (results: number[]) => void;
 };
 
@@ -15,6 +18,8 @@ type DiceInstance = {
     mesh: THREE.Mesh;
     body: Body;
     faces: FaceNormal[];
+    collideHandler?: (event: { contact?: { getImpactVelocityAlongNormal: () => number } }) => void;
+    soundUrl?: string;
 };
 
 type DiceDefinition = {
@@ -262,7 +267,15 @@ const createDiceDefinition = (sides: number): DiceDefinition => {
     }
 };
 
-const PhysicsDice = ({ diceSides, diceCount = 2, rollKey = 0, onResults }: PhysicsDiceProps) => {
+const PhysicsDice = ({
+    diceSides,
+    diceCount = 2,
+    rollKey = 0,
+    collisionSoundUrl,
+    collisionSoundUrls,
+    collisionVolume = 0.6,
+    onResults,
+}: PhysicsDiceProps) => {
     const containerRef = useRef<HTMLDivElement | null>(null);
     const worldRef = useRef<World | null>(null);
     const diceRef = useRef<DiceInstance[]>([]);
@@ -274,6 +287,10 @@ const PhysicsDice = ({ diceSides, diceCount = 2, rollKey = 0, onResults }: Physi
     const settleFramesRef = useRef(0);
     const resultEmittedRef = useRef(false);
     const pointerStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+    const audioPoolRef = useRef<Record<string, HTMLAudioElement[]>>({});
+    const audioIndexRef = useRef(0);
+    const lastSoundTimeRef = useRef(0);
+    const audioPrimedRef = useRef(false);
 
     const resolvedSides = useMemo(() => {
         if (diceSides && diceSides.length > 0) return diceSides;
@@ -282,8 +299,9 @@ const PhysicsDice = ({ diceSides, diceCount = 2, rollKey = 0, onResults }: Physi
 
     const clearDice = () => {
         if (!sceneRef.current || !worldRef.current) return;
-        diceRef.current.forEach(({ mesh, body }) => {
+        diceRef.current.forEach(({ mesh, body, collideHandler }) => {
             sceneRef.current?.remove(mesh);
+            if (collideHandler) body.removeEventListener('collide', collideHandler);
             worldRef.current?.removeBody(body);
             mesh.geometry.dispose();
             if (Array.isArray(mesh.material)) {
@@ -298,6 +316,23 @@ const PhysicsDice = ({ diceSides, diceCount = 2, rollKey = 0, onResults }: Physi
     const createDiceSet = (sidesList: number[], diceMaterial: Material) => {
         if (!sceneRef.current || !worldRef.current) return;
         clearDice();
+
+        const playImpactSound = (impact: number, soundUrl?: string) => {
+            if (!soundUrl) return;
+            const pool = audioPoolRef.current[soundUrl];
+            if (!pool || pool.length === 0) return;
+            const now = performance.now();
+            if (now - lastSoundTimeRef.current < 80) return;
+            if (impact < 1.2) return;
+
+            lastSoundTimeRef.current = now;
+            const volume = Math.min(Math.max((impact / 12) * collisionVolume, 0), 1);
+            const audio = pool[audioIndexRef.current % pool.length];
+            audioIndexRef.current = (audioIndexRef.current + 1) % pool.length;
+            audio.volume = volume;
+            audio.currentTime = 0;
+            void audio.play();
+        };
 
         sidesList.forEach((sides, index) => {
             const { geometry, shape, faces, materials } = createDiceDefinition(sides);
@@ -318,8 +353,14 @@ const PhysicsDice = ({ diceSides, diceCount = 2, rollKey = 0, onResults }: Physi
             body.sleepSpeedLimit = 0.15;
             body.sleepTimeLimit = 0.4;
             worldRef.current?.addBody(body);
+            const soundUrl = collisionSoundUrls?.[index] ?? collisionSoundUrl;
+            const collideHandler = (event: { contact?: { getImpactVelocityAlongNormal: () => number } }) => {
+                const impact = event.contact?.getImpactVelocityAlongNormal?.() ?? 0;
+                playImpactSound(Math.abs(impact), soundUrl);
+            };
+            body.addEventListener('collide', collideHandler);
 
-            diceRef.current.push({ mesh, body, faces });
+            diceRef.current.push({ mesh, body, faces, collideHandler, soundUrl });
         });
     };
 
@@ -369,6 +410,49 @@ const PhysicsDice = ({ diceSides, diceCount = 2, rollKey = 0, onResults }: Physi
             });
         }
     };
+
+    const primeAudio = () => {
+        if (audioPrimedRef.current) return;
+        audioPrimedRef.current = true;
+        Object.values(audioPoolRef.current).forEach((pool) => {
+            pool.forEach((audio) => {
+                audio.volume = 0;
+                audio.currentTime = 0;
+                audio.play()
+                    .then(() => {
+                        audio.pause();
+                        audio.currentTime = 0;
+                    })
+                    .catch(() => {
+                        // ignore autoplay blocking
+                    });
+            });
+        });
+    };
+
+    useEffect(() => {
+        const urls = Array.from(
+            new Set([
+                ...(collisionSoundUrls ?? []),
+                ...(collisionSoundUrl ? [collisionSoundUrl] : []),
+            ])
+        );
+        if (urls.length === 0) {
+            audioPoolRef.current = {};
+            return;
+        }
+
+        const pool: Record<string, HTMLAudioElement[]> = {};
+        urls.forEach((url) => {
+            pool[url] = Array.from({ length: 4 }, () => {
+                const audio = new Audio(url);
+                audio.preload = 'auto';
+                return audio;
+            });
+        });
+
+        audioPoolRef.current = pool;
+    }, [collisionSoundUrl, collisionSoundUrls]);
 
     useEffect(() => {
         const container = containerRef.current;
@@ -505,6 +589,7 @@ const PhysicsDice = ({ diceSides, diceCount = 2, rollKey = 0, onResults }: Physi
         animationRef.current = requestAnimationFrame(animate);
 
         const handlePointerDown = (event: PointerEvent) => {
+            primeAudio();
             pointerStartRef.current = {
                 x: event.clientX,
                 y: event.clientY,
@@ -553,7 +638,7 @@ const PhysicsDice = ({ diceSides, diceCount = 2, rollKey = 0, onResults }: Physi
             createDiceSet(resolvedSides, diceMaterial);
             rollDice();
         }
-    }, [resolvedSides]);
+    }, [resolvedSides, collisionSoundUrls, collisionSoundUrl]);
 
     useEffect(() => {
         if (!worldRef.current) return;
