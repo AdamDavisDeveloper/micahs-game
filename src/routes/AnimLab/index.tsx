@@ -1,38 +1,39 @@
 import React, { useState } from 'react';
-import Dice from '../../animations/lab/Dice';
-
-const randomDiceValues = (): number[] => {
-  const values = [1, 2, 3, 4, 5, 6];
-  return values.sort(() => Math.random() - 0.5);
-};
+import PhysicsDice from '../../animations/lab/PhysicsDice';
+import './AnimLab.scss';
 
 const AnimLab = () => {
-  const [animationName, setAnimationName] = useState<'diceRotate1' | 'diceRotate2' | 'diceRotate3'>('diceRotate1');
-  const [animationKey, setAnimationKey] = useState(0);
-  const [diceValues, setDiceValues] = useState<number[]>(randomDiceValues());
+  const [diceCount, setDiceCount] = useState(2);
+  const [rollKey, setRollKey] = useState(0);
+  const [results, setResults] = useState<number[]>([]);
 
-  const handleAnimate = () => {
-    setDiceValues(randomDiceValues());
-    setAnimationKey((prev) => prev + 1);
-  };
+  const handleRoll = () => setRollKey((prev) => prev + 1);
 
   return (
     <div className="AnimLab">
       <div className="animlab-controls">
-        <button type="button" onClick={() => setAnimationName('diceRotate1')}>
-          Type 1
-        </button>
-        <button type="button" onClick={() => setAnimationName('diceRotate2')}>
-          Type 2
-        </button>
-        <button type="button" onClick={() => setAnimationName('diceRotate3')}>
-          Type 3
-        </button>
-        <button type="button" onClick={handleAnimate}>
+        <button type="button" onClick={handleRoll}>
           Roll Dice
         </button>
+        <button type="button" onClick={() => setDiceCount(1)}>
+          1 Die
+        </button>
+        <button type="button" onClick={() => setDiceCount(2)}>
+          2 Dice
+        </button>
+        <button type="button" onClick={() => setDiceCount(3)}>
+          3 Dice
+        </button>
+        <button type="button" onClick={() => setDiceCount(4)}>
+          4 Dice
+        </button>
       </div>
-      <Dice animationDuration={1.3} animationName={animationName} animationKey={animationKey} diceValues={diceValues} />
+      <PhysicsDice diceCount={diceCount} rollKey={rollKey} onResults={setResults} />
+      {results.length > 0 && (
+        <div className="animlab-results">
+          Result: {results.join(', ')} (Total {results.reduce((sum, value) => sum + value, 0)})
+        </div>
+      )}
     </div>
   );
 };

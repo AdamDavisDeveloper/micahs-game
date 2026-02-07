@@ -1,0 +1,36 @@
+.AnimLab {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 16px 20px 24px;
+}
+
+.animlab-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.animlab-controls button {
+    background: #2b2f3a;
+    color: #e6e8ff;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 8px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.animlab-controls button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+}
+
+.animlab-results {
+    color: #e6e8ff;
+    font-weight: 600;
+    padding: 8px 12px;
+    background: rgba(18, 20, 27, 0.75);
+    border-radius: 10px;
+    width: fit-content;
+}

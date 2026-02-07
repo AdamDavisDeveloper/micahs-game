@@ -99,7 +99,7 @@ const Game = () => {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to draw encounter');
     }
-  };  const handleSelectIntention = (intention: Intention) => {
+  }; const handleSelectIntention = (intention: Intention) => {
     try {
       setError(null);
       selectIntention(intention);
@@ -121,6 +121,7 @@ const Game = () => {
       setError(err instanceof Error ? err.message : 'Failed to resolve encounter');
     }
   };
+
 
   const handleEndTurn = () => {
     try {
@@ -190,6 +191,7 @@ const Game = () => {
     }
     return 'N/A';
   };
+
 
   return (
     <div>
@@ -336,6 +338,7 @@ const Game = () => {
           </div>
         )}
       </div>
+
 
       {/* Dice Roll Results */}
       {lastRollResult && (
