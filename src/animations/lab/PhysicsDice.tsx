@@ -28,6 +28,8 @@ type DiceInstance = {
     facePlates?: THREE.Mesh[];
     faceOffsets?: number[];
     radius: number;
+    sides: number;
+    d4VertexValues?: number[];
 };
 
 type DiceDefinition = {
@@ -37,6 +39,7 @@ type DiceDefinition = {
     materials: THREE.Material[];
     faceOffsets: number[];
     radius: number;
+    collisionScale?: number;
 };
 
 type FaceNormal = {
@@ -83,6 +86,7 @@ const createFaceTexture = (value: number, sides: number) => {
     return texture;
 };
 
+
 const createDiceMaterials = (values: number[], sides: number) =>
     values.map(
         (value) =>
@@ -121,6 +125,24 @@ const getTopFaceValue = (body: Body, faces: FaceNormal[]) => {
         }
     });
     return topValue;
+};
+
+const getTopDieValue = (die: DiceInstance) => {
+    const primaryShape = die.body.shapes[0];
+    if (die.sides === 4 && die.d4VertexValues && primaryShape instanceof ConvexPolyhedron) {
+        let maxY = -Infinity;
+        let topValue = 1;
+        primaryShape.vertices.forEach((vertex: Vec3, index: number) => {
+            const worldPos = die.body.quaternion.vmult(vertex).vadd(die.body.position);
+            if (worldPos.y > maxY) {
+                maxY = worldPos.y;
+                topValue = die.d4VertexValues?.[index] ?? topValue;
+            }
+        });
+        return topValue;
+    }
+
+    return getTopFaceValue(die.body, die.faces);
 };
 
 const buildConvexFromGeometry = (geometry: THREE.BufferGeometry) => {
@@ -259,8 +281,13 @@ const createCustomPolyhedron = (vertices: Vec3[], faces: number[][], sides: numb
 const createDiceDefinition = (sides: number): DiceDefinition => {
     switch (sides) {
         case 4: {
-            const geometry = new THREE.TetrahedronGeometry(0.65);
-            return createPolyhedronDice(geometry, sides, 4);
+            const geometry = new THREE.TetrahedronGeometry(0.78);
+            const definition = createPolyhedronDice(geometry, sides, 4);
+            return {
+                ...definition,
+                radius: definition.radius * 1.06,
+                collisionScale: 0.95,
+            };
         }
         case 6: {
             const geometry = new THREE.BoxGeometry(1, 1, 1);
@@ -433,10 +460,11 @@ const PhysicsDice = ({
     };
 
     const createDie = (sides: number, index: number, diceMaterial: Material, dropFromAbove: boolean) => {
-        const { geometry, shape, faces, materials, radius, faceOffsets } = createDiceDefinition(sides);
+        const { geometry, shape, faces, materials, radius, faceOffsets, collisionScale } = createDiceDefinition(sides);
         const mesh = new THREE.Mesh(geometry, materials);
         mesh.castShadow = true;
         mesh.receiveShadow = true;
+        mesh.geometry.computeVertexNormals();
         mesh.position.set(
             (index - (resolvedSides.length - 1) / 2) * 1.6,
             dropFromAbove ? 3.5 + index * 0.2 : 1.2,
@@ -445,26 +473,142 @@ const PhysicsDice = ({
         sceneRef.current?.add(mesh);
 
         const facePlates: THREE.Mesh[] = [];
-        const plateSize = radius * 0.9;
+        const plateSize = radius * (sides === 4 ? 0.85 : 0.9);
         const plateGeometry = new THREE.PlaneGeometry(plateSize, plateSize);
+        const bufferGeometry = geometry.index ? geometry : geometry.toNonIndexed();
+        const positionAttr = bufferGeometry.attributes.position;
+        const indexArray = bufferGeometry.index ? (bufferGeometry.index.array as ArrayLike<number>) : null;
+
+        const d4VertexValues = (() => {
+            if (sides !== 4) return undefined;
+            const keyToUnique = new Map<string, number>();
+            const uniquePositions: THREE.Vector3[] = [];
+            const perIndexToUnique: number[] = [];
+
+            for (let i = 0; i < positionAttr.count; i += 1) {
+                const x = positionAttr.getX(i);
+                const y = positionAttr.getY(i);
+                const z = positionAttr.getZ(i);
+                const key = `${x.toFixed(5)}|${y.toFixed(5)}|${z.toFixed(5)}`;
+                let uniqueIndex = keyToUnique.get(key);
+                if (uniqueIndex === undefined) {
+                    uniqueIndex = uniquePositions.length;
+                    keyToUnique.set(key, uniqueIndex);
+                    uniquePositions.push(new THREE.Vector3(x, y, z));
+                }
+                perIndexToUnique[i] = uniqueIndex;
+            }
+
+            const sorted = uniquePositions
+                .map((position, index) => ({ position, index }))
+                .sort((a, b) =>
+                    b.position.y - a.position.y || b.position.x - a.position.x || b.position.z - a.position.z
+                );
+            const uniqueValues = new Array(uniquePositions.length).fill(1);
+            sorted.forEach((item, index) => {
+                uniqueValues[item.index] = index + 1;
+            });
+
+            return perIndexToUnique.map((uniqueIndex) => uniqueValues[uniqueIndex] ?? 1);
+        })();
+
+        const getFaceVertices = (faceIndex: number) => {
+            const group = bufferGeometry.groups[faceIndex];
+            if (!group) return [] as { index: number; position: THREE.Vector3 }[];
+            const start = group.start;
+            const indices = indexArray
+                ? [indexArray[start], indexArray[start + 1], indexArray[start + 2]]
+                : [start, start + 1, start + 2];
+            return indices.map((idx) => ({
+                index: idx,
+                position: new THREE.Vector3(positionAttr.getX(idx), positionAttr.getY(idx), positionAttr.getZ(idx)),
+            }));
+        };
+
         faces.forEach(({ normal, value }, faceIndex) => {
-            const texture = createFaceTexture(value, sides);
-            const plateMaterial = new THREE.MeshBasicMaterial({
-                map: texture,
+            const normalVec = new THREE.Vector3(normal.x, normal.y, normal.z).normalize();
+            const faceOffset = faceOffsets?.[faceIndex] ?? radius * 0.88;
+            const offset = faceOffset * 1.03;
+            const plateMaterialOptions = {
                 transparent: true,
                 polygonOffset: true,
                 polygonOffsetFactor: -1,
                 polygonOffsetUnits: -1,
+                depthTest: true,
+                depthWrite: false,
+            };
+
+            const plateTargets: {
+                position: THREE.Vector3;
+                desiredUp?: THREE.Vector3;
+                desiredRight?: THREE.Vector3;
+                value?: number;
+            }[] = [];
+            if (sides === 4) {
+                const faceVerts = getFaceVertices(faceIndex);
+                const faceCenter = faceVerts
+                    .reduce((acc, vertex) => acc.add(vertex.position), new THREE.Vector3())
+                    .multiplyScalar(faceVerts.length > 0 ? 1 / faceVerts.length : 1);
+                const inset = 0.5;
+                const lift = offset - faceOffset;
+                faceVerts.forEach((vertex, vertexIndex) => {
+                    const otherA = faceVerts[(vertexIndex + 1) % faceVerts.length];
+                    const otherB = faceVerts[(vertexIndex + 2) % faceVerts.length];
+                    const position = faceCenter
+                        .clone()
+                        .add(vertex.position.clone().sub(faceCenter).multiplyScalar(inset))
+                        .add(normalVec.clone().multiplyScalar(lift));
+                    const desiredUp = vertex.position
+                        .clone()
+                        .sub(position)
+                        .projectOnPlane(normalVec)
+                        .normalize();
+                    const edgeDir = otherB.position
+                        .clone()
+                        .sub(otherA.position)
+                        .projectOnPlane(normalVec)
+                        .normalize();
+                    plateTargets.push({
+                        position,
+                        desiredUp,
+                        desiredRight: edgeDir,
+                        value: d4VertexValues?.[vertex.index] ?? value,
+                    });
+                });
+            } else {
+                plateTargets.push({ position: normalVec.clone().multiplyScalar(offset), value });
+            }
+
+            plateTargets.forEach(({ position, desiredUp, desiredRight, value: plateValue }) => {
+                const texture = createFaceTexture(plateValue ?? value, sides);
+                const plateMaterial = new THREE.MeshBasicMaterial({
+                    map: texture,
+                    ...plateMaterialOptions,
+                });
+                const plate = new THREE.Mesh(plateGeometry, plateMaterial);
+                plate.position.copy(position);
+                if (desiredUp && desiredRight) {
+                    let right = desiredRight.clone().normalize();
+                    let up = normalVec.clone().cross(right).normalize();
+                    if (up.dot(desiredUp) < 0) {
+                        right.multiplyScalar(-1);
+                        up = normalVec.clone().cross(right).normalize();
+                    }
+                    const basis = new THREE.Matrix4().makeBasis(right, up, normalVec);
+                    plate.quaternion.setFromRotationMatrix(basis);
+                } else {
+                    plateQuatRef.current.setFromUnitVectors(new THREE.Vector3(0, 0, 1), normalVec);
+                    plate.quaternion.copy(plateQuatRef.current);
+                }
+                mesh.add(plate);
+                facePlates.push(plate);
             });
-            const plate = new THREE.Mesh(plateGeometry, plateMaterial);
-            const faceOffset = faceOffsets?.[faceIndex] ?? radius * 0.88;
-            const offset = faceOffset * 1.03;
-            plate.position.set(normal.x * offset, normal.y * offset, normal.z * offset);
-            plateQuatRef.current.setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal);
-            plate.quaternion.copy(plateQuatRef.current);
-            mesh.add(plate);
-            facePlates.push(plate);
         });
+        if (collisionScale && shape instanceof ConvexPolyhedron) {
+            shape.vertices.forEach((vertex) => vertex.scale(collisionScale));
+            shape.updateBoundingSphereRadius();
+        }
+
         const body = new Body({
             mass: 1,
             shape,
@@ -485,6 +629,8 @@ const PhysicsDice = ({
             facePlates,
             faceOffsets,
             radius,
+            sides,
+            d4VertexValues,
         };
         const collideHandler = (event: { contact?: { getImpactVelocityAlongNormal: () => number } }) => {
             const impact = event.contact?.getImpactVelocityAlongNormal?.() ?? 0;
@@ -513,6 +659,9 @@ const PhysicsDice = ({
             : new Vec3((Math.random() - 0.5) * 6, 7 + Math.random() * 2, (Math.random() - 0.5) * 6);
 
         diceRef.current.forEach(({ body }) => {
+            body.wakeUp();
+            body.sleepState = 0;
+            body.sleepTimeLimit = 0.4;
             body.velocity.setZero();
             body.angularVelocity.setZero();
             body.quaternion.setFromEuler(
@@ -637,9 +786,13 @@ const PhysicsDice = ({
                 color: '#1c1f26',
                 roughness: 0.9,
                 metalness: 0.1,
+                polygonOffset: true,
+                polygonOffsetFactor: 1,
+                polygonOffsetUnits: 1,
             })
         );
         floor.rotation.x = -Math.PI / 2;
+        floor.position.y = -0.01;
         floor.receiveShadow = true;
         scene.add(floor);
 
@@ -847,7 +1000,7 @@ const PhysicsDice = ({
             }
 
             if (settleFramesRef.current > 30 && !resultEmittedRef.current) {
-                const results = diceRef.current.map(({ body, faces }) => getTopFaceValue(body, faces));
+                const results = diceRef.current.map((die) => getTopDieValue(die));
                 resultEmittedRef.current = true;
                 zoomOutRef.current = true;
                 if (camera) {
