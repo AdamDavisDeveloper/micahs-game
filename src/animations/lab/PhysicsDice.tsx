@@ -487,6 +487,7 @@ const PhysicsDice = ({
     const keyLightTargetRef = useRef<THREE.Object3D | null>(null);
     const ambientLightRef = useRef<THREE.AmbientLight | null>(null);
     const fillLightRef = useRef<THREE.DirectionalLight | null>(null);
+    const diceMaterialRef = useRef<Material | null>(null);
     const animationRef = useRef<number | null>(null);
     const lastTimeRef = useRef<number>(performance.now());
     const settleFramesRef = useRef(0);
@@ -495,6 +496,7 @@ const PhysicsDice = ({
     const pulseActiveRef = useRef(false);
     const textColorRef = useRef(textColor);
     const highlightTextColorRef = useRef(highlightTextColor);
+    const prevSidesRef = useRef<number[]>([]);
     const pointerStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
     const audioPoolRef = useRef<Record<string, HTMLAudioElement[]>>({});
     const audioIndexRef = useRef(0);
@@ -940,6 +942,7 @@ const PhysicsDice = ({
         worldRef.current = world;
 
         const diceMaterial = new Material('dice');
+        diceMaterialRef.current = diceMaterial;
         const floorMaterial = new Material('floor');
         world.addContactMaterial(
             new ContactMaterial(diceMaterial, floorMaterial, {
@@ -1290,28 +1293,59 @@ const PhysicsDice = ({
 
     useEffect(() => {
         if (!worldRef.current) return;
-        const diceMaterial = worldRef.current.bodies.find((body) => body.material?.name === 'dice')?.material;
-        if (diceMaterial instanceof Material) {
-            const currentCount = diceRef.current.length;
-            if (currentCount === 0) {
-                createDiceSet(resolvedSides, diceMaterial);
-                if (autoRollOnSetup) {
-                    rollDice();
+        const diceMaterial = diceMaterialRef.current;
+        if (!diceMaterial) return;
+
+        const prevSides = [...prevSidesRef.current];
+        const nextSides = [...resolvedSides];
+
+        if (prevSides.length === 0 && nextSides.length > 0) {
+            createDiceSet(nextSides, diceMaterial);
+            prevSidesRef.current = nextSides;
+            if (autoRollOnSetup) {
+                rollDice();
+            }
+            return;
+        }
+
+        let changed = true;
+        while (changed) {
+            changed = false;
+            const minLen = Math.min(prevSides.length, nextSides.length);
+            let mismatchIndex = -1;
+            for (let i = 0; i < minLen; i += 1) {
+                if (prevSides[i] !== nextSides[i]) {
+                    mismatchIndex = i;
+                    break;
                 }
+            }
+
+            if (prevSides.length > nextSides.length) {
+                const removeIndex = mismatchIndex !== -1 ? mismatchIndex : prevSides.length - 1;
+                removeDieAt(removeIndex);
+                prevSides.splice(removeIndex, 1);
+                changed = true;
+                continue;
+            }
+
+            if (prevSides.length < nextSides.length) {
+                for (let i = prevSides.length; i < nextSides.length; i += 1) {
+                    createDie(nextSides[i], i, diceMaterial, true);
+                }
+                prevSidesRef.current = nextSides;
                 return;
             }
 
-            if (resolvedSides.length > currentCount) {
-                for (let i = currentCount; i < resolvedSides.length; i += 1) {
-                    createDie(resolvedSides[i], i, diceMaterial, true);
-                }
-            } else if (resolvedSides.length < currentCount) {
-                for (let i = currentCount - 1; i >= resolvedSides.length; i -= 1) {
-                    removeDieAt(i);
-                }
+            if (mismatchIndex !== -1) {
+                removeDieAt(mismatchIndex);
+                createDie(nextSides[mismatchIndex], mismatchIndex, diceMaterial, true);
+                prevSides[mismatchIndex] = nextSides[mismatchIndex];
+                changed = true;
             }
         }
-    }, [resolvedSides, collisionSoundUrls, collisionSoundUrl]);
+
+        prevSidesRef.current = nextSides;
+    }, [resolvedSides, collisionSoundUrls, collisionSoundUrl, autoRollOnSetup]);
 
     useEffect(() => {
         diceRef.current.forEach((die, index) => {

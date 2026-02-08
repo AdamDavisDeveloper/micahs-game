@@ -13,11 +13,11 @@ type SoundOption = {
 };
 
 const AnimLab = () => {
-  const [diceCount, setDiceCount] = useState(2);
+  const [diceCount, setDiceCount] = useState(0);
   const [rollKey, setRollKey] = useState(0);
   const [results, setResults] = useState<number[]>([]);
-  const [perDieSounds, setPerDieSounds] = useState<string[]>(Array(2).fill(diceHitOneUrl));
-  const [diceSides, setDiceSides] = useState<number[]>(Array(2).fill(6));
+  const [perDieSounds, setPerDieSounds] = useState<string[]>([]);
+  const [diceSides, setDiceSides] = useState<number[]>([]);
   const [diceColor, setDiceColor] = useState('#ffffff');
   const [diceRoughness, setDiceRoughness] = useState(0.005);
   const [diceMetalness, setDiceMetalness] = useState(0.1);
@@ -137,10 +137,9 @@ const AnimLab = () => {
                 type="button"
                 className="animlab-remove"
                 onClick={() => {
-                  if (diceSides.length <= 1) return;
                   setPerDieSounds((prev) => prev.filter((_, i) => i !== index));
                   setDiceSides((prev) => prev.filter((_, i) => i !== index));
-                  setDiceCount((prev) => Math.max(prev - 1, 1));
+                  setDiceCount((prev) => Math.max(prev - 1, 0));
                 }}
                 aria-label={`Remove die ${index + 1}`}
               >
