@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import PhysicsDice from '../../animations/lab/PhysicsDice';
 import diceHitOneUrl from '../../animations/assets/sounds/dice-hit-1.ogg';
-import diceHitTwoUrl from '../../animations/assets/sounds/dice-hit-2.ogg';
+import diceHitTwoUrl from '../../animations/assets/sounds/dice-hit-2.mp3';
 import diceHitThreeUrl from '../../animations/assets/sounds/dice-hit-3.ogg';
+import diceHitFourUrl from '../../animations/assets/sounds/dice-hit-4.mp3';
+import diceHitFiveUrl from '../../animations/assets/sounds/dice-hit-5.mp3';
 import './AnimLab.scss';
 
 type SoundOption = {
@@ -14,14 +16,15 @@ const AnimLab = () => {
   const [diceCount, setDiceCount] = useState(2);
   const [rollKey, setRollKey] = useState(0);
   const [results, setResults] = useState<number[]>([]);
-  const [collisionVolume, setCollisionVolume] = useState(0.6);
   const [perDieSounds, setPerDieSounds] = useState<string[]>(Array(2).fill(diceHitOneUrl));
   const [diceSides, setDiceSides] = useState<number[]>(Array(2).fill(6));
 
   const soundOptions: SoundOption[] = [
-    { label: 'Dice hit 1', url: diceHitOneUrl },
-    { label: 'Dice hit 2', url: diceHitTwoUrl },
-    { label: 'Dice hit 3', url: diceHitThreeUrl },
+    { label: 'Hit Sound Opt1', url: diceHitOneUrl },
+    { label: 'Hit Sound Opt2', url: diceHitTwoUrl },
+    { label: 'Hit Sound Opt3', url: diceHitThreeUrl },
+    { label: 'Hit Sound Opt4', url: diceHitFourUrl },
+    { label: 'Hit Sound Opt5', url: diceHitFiveUrl },
   ];
 
   useEffect(() => {
@@ -100,24 +103,13 @@ const AnimLab = () => {
           Add D20
         </button>
       </div>
-      <div className="animlab-controls">
-        <label className="animlab-volume">
-          Volume
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.05}
-            value={collisionVolume}
-            onChange={(event) => setCollisionVolume(Number(event.target.value))}
-          />
-        </label>
-      </div>
       <div className="animlab-sounds">
         {perDieSounds.map((sound, index) => (
           <div key={`die-sound-${index}`} className="animlab-sound-select">
             <div className="animlab-sound-header">
-              <span>Die {index + 1}</span>
+              <span>
+                Die {index + 1} (D{diceSides[index] ?? 6})
+              </span>
               <button
                 type="button"
                 className="animlab-remove"
@@ -154,7 +146,6 @@ const AnimLab = () => {
         diceCount={diceCount}
         rollKey={rollKey}
         collisionSoundUrls={perDieSounds}
-        collisionVolume={collisionVolume}
         tableHalfSize={5}
         tableWallHeight={2.4}
         tableCeilingHeight={6}

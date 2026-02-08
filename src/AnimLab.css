@@ -35,18 +35,6 @@
   width: fit-content;
 }
 
-.animlab-volume {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  color: #000000;
-  font-weight: 600;
-}
-
-.animlab-volume input[type=range] {
-  accent-color: #7f8cff;
-}
-
 .animlab-sounds {
   display: flex;
   flex-wrap: wrap;
