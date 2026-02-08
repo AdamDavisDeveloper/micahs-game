@@ -56,16 +56,25 @@ const D6_FACE_NORMALS: FaceNormal[] = [
     { normal: new Vec3(0, 0, -1), value: 5 },
 ];
 
-const createFaceTexture = (value: number, sides: number) => {
-    const size = 256;
-    const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return new THREE.CanvasTexture(canvas);
+type FaceTexture = {
+    texture: THREE.CanvasTexture;
+    canvas: HTMLCanvasElement;
+    ctx: CanvasRenderingContext2D;
+    value: number;
+    sides: number;
+    lastColor: string;
+};
 
+const updateFaceTextureColor = (faceTexture: FaceTexture, color: string) => {
+    if (faceTexture.lastColor === color) return;
+    const { canvas, ctx, value, sides } = faceTexture;
+    const size = canvas.width;
     ctx.clearRect(0, 0, size, size);
-    ctx.fillStyle = '#141414';
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.85)';
+    ctx.shadowBlur = 10;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 2;
+    ctx.fillStyle = color;
     const label = String(value);
     let fontSize = sides >= 20 ? 110 : sides >= 12 ? 120 : sides >= 10 ? 128 : 140;
     ctx.textAlign = 'center';
@@ -79,11 +88,39 @@ const createFaceTexture = (value: number, sides: number) => {
     }
 
     ctx.fillText(label, size / 2, size / 2);
+    faceTexture.texture.needsUpdate = true;
+    faceTexture.lastColor = color;
+};
+
+const createFaceTexture = (value: number, sides: number) => {
+    const size = 256;
+    const canvas = document.createElement('canvas');
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) {
+        return {
+            texture: new THREE.CanvasTexture(canvas),
+            canvas,
+            ctx: ctx as unknown as CanvasRenderingContext2D,
+            value,
+            sides,
+            lastColor: '',
+        };
+    }
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.anisotropy = 8;
-    texture.needsUpdate = true;
-    return texture;
+    const faceTexture: FaceTexture = {
+        texture,
+        canvas,
+        ctx,
+        value,
+        sides,
+        lastColor: '',
+    };
+    updateFaceTextureColor(faceTexture, '#141414');
+    return faceTexture;
 };
 
 
@@ -144,6 +181,11 @@ const getTopDieValue = (die: DiceInstance) => {
 
     return getTopFaceValue(die.body, die.faces);
 };
+
+const HIGHLIGHT_COLOR = new THREE.Color('#f7d070');
+const BASE_PLATE_COLOR = new THREE.Color('#ffffff');
+const BASE_TEXT_COLOR = new THREE.Color('#ffffff');
+const HIGHLIGHT_TEXT_COLOR = new THREE.Color('#800080');
 
 const buildConvexFromGeometry = (geometry: THREE.BufferGeometry) => {
     const buffer = geometry.index ? geometry : geometry.toNonIndexed();
@@ -403,6 +445,8 @@ const PhysicsDice = ({
     const lastTimeRef = useRef<number>(performance.now());
     const settleFramesRef = useRef(0);
     const resultEmittedRef = useRef(false);
+    const lastResultsRef = useRef<number[]>([]);
+    const pulseActiveRef = useRef(false);
     const pointerStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
     const audioPoolRef = useRef<Record<string, HTMLAudioElement[]>>({});
     const audioIndexRef = useRef(0);
@@ -486,6 +530,22 @@ const PhysicsDice = ({
         audio.volume = volume;
         audio.currentTime = 0;
         void audio.play();
+    };
+
+    const resetPlateHighlights = () => {
+        diceRef.current.forEach((die) => {
+            die.facePlates?.forEach((plate) => {
+                if (plate.material instanceof THREE.MeshBasicMaterial) {
+                    plate.material.color.copy(BASE_PLATE_COLOR);
+                    plate.material.opacity = 1;
+                }
+                const faceTexture = plate.userData.faceTexture as FaceTexture | undefined;
+                if (faceTexture) {
+                    updateFaceTextureColor(faceTexture, BASE_TEXT_COLOR.getStyle());
+                }
+            });
+
+        });
     };
 
     const createDie = (sides: number, index: number, diceMaterial: Material, dropFromAbove: boolean) => {
@@ -636,13 +696,16 @@ const PhysicsDice = ({
             }
 
             plateTargets.forEach(({ position, desiredUp, desiredRight, value: plateValue }) => {
-                const texture = createFaceTexture(plateValue ?? value, sides);
+                const faceTexture = createFaceTexture(plateValue ?? value, sides);
                 const plateMaterial = new THREE.MeshBasicMaterial({
-                    map: texture,
+                    map: faceTexture.texture,
                     ...plateMaterialOptions,
                 });
                 const plate = new THREE.Mesh(plateGeometry, plateMaterial);
                 plate.position.copy(position);
+                plate.userData.value = plateValue ?? value;
+                plate.userData.faceTexture = faceTexture;
+                plate.userData.faceIndex = faceIndex;
                 if (desiredUp && desiredRight) {
                     let right = desiredRight.clone().normalize();
                     let up = normalVec.clone().cross(right).normalize();
@@ -709,6 +772,9 @@ const PhysicsDice = ({
 
     const rollDice = (impulseDirection?: { x: number; z: number }) => {
         if (!worldRef.current) return;
+        lastResultsRef.current = [];
+        pulseActiveRef.current = false;
+        resetPlateHighlights();
 
         const impulseBase = impulseDirection
             ? new Vec3(impulseDirection.x * 6, 6 + Math.random() * 2, impulseDirection.z * 6)
@@ -1058,11 +1124,48 @@ const PhysicsDice = ({
             if (settleFramesRef.current > 30 && !resultEmittedRef.current) {
                 const results = diceRef.current.map((die) => getTopDieValue(die));
                 resultEmittedRef.current = true;
+                lastResultsRef.current = results;
+                pulseActiveRef.current = true;
                 zoomOutRef.current = true;
                 if (camera) {
                     zoomOutDirRef.current.copy(camera.position).sub(tableCenterRef.current).normalize();
                 }
                 onResults?.(results);
+            }
+
+            if (zoomOutRef.current && camera && pulseActiveRef.current) {
+                const desired = cameraDesiredRef.current;
+                const target = cameraTargetRef.current;
+                const targetDelta = target.distanceTo(initialCameraTargetRef.current);
+                const positionDelta = camera.position.distanceTo(desired);
+                if (positionDelta < 0.05 && targetDelta < 0.05) {
+                    pulseActiveRef.current = false;
+                }
+            }
+
+            if (resultEmittedRef.current && lastResultsRef.current.length > 0) {
+                const pulse = pulseActiveRef.current ? (Math.sin(performance.now() * 0.008) + 1) / 2 : 1;
+                const textColor = BASE_TEXT_COLOR.clone().lerp(HIGHLIGHT_TEXT_COLOR, pulse).getStyle();
+
+                diceRef.current.forEach((die, index) => {
+                    const targetValue = lastResultsRef.current[index];
+
+                    die.facePlates?.forEach((plate) => {
+                        if (!(plate.material instanceof THREE.MeshBasicMaterial)) return;
+                        const plateValue = plate.userData.value as number | undefined;
+                        const faceTexture = plate.userData.faceTexture as FaceTexture | undefined;
+
+                        if (plateValue === targetValue) {
+                            plate.material.color.copy(BASE_PLATE_COLOR);
+                            plate.material.opacity = 1;
+                            if (faceTexture) updateFaceTextureColor(faceTexture, textColor);
+                        } else {
+                            plate.material.color.copy(BASE_PLATE_COLOR);
+                            plate.material.opacity = 1;
+                            if (faceTexture) updateFaceTextureColor(faceTexture, BASE_TEXT_COLOR.getStyle());
+                        }
+                    });
+                });
             }
 
             if (camera) {
