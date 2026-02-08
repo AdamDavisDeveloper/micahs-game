@@ -493,6 +493,8 @@ const PhysicsDice = ({
     const resultEmittedRef = useRef(false);
     const lastResultsRef = useRef<number[]>([]);
     const pulseActiveRef = useRef(false);
+    const textColorRef = useRef(textColor);
+    const highlightTextColorRef = useRef(highlightTextColor);
     const pointerStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
     const audioPoolRef = useRef<Record<string, HTMLAudioElement[]>>({});
     const audioIndexRef = useRef(0);
@@ -587,7 +589,7 @@ const PhysicsDice = ({
                 }
                 const faceTexture = plate.userData.faceTexture as FaceTexture | undefined;
                 if (faceTexture) {
-                    updateFaceTextureColor(faceTexture, new THREE.Color(textColor).getStyle());
+                    updateFaceTextureColor(faceTexture, new THREE.Color(textColorRef.current).getStyle());
                 }
             });
 
@@ -1208,8 +1210,11 @@ const PhysicsDice = ({
 
             if (resultEmittedRef.current && lastResultsRef.current.length > 0) {
                 const pulse = pulseActiveRef.current ? (Math.sin(performance.now() * 0.008) + 1) / 2 : 1;
-                const baseText = new THREE.Color(textColor);
-                const textColorValue = baseText.clone().lerp(new THREE.Color(highlightTextColor), pulse).getStyle();
+                const baseText = new THREE.Color(textColorRef.current);
+                const textColorValue = baseText
+                    .clone()
+                    .lerp(new THREE.Color(highlightTextColorRef.current), pulse)
+                    .getStyle();
 
                 diceRef.current.forEach((die, index) => {
                     const targetValue = lastResultsRef.current[index];
@@ -1317,6 +1322,14 @@ const PhysicsDice = ({
     useEffect(() => {
         resetPlateHighlights();
     }, [textColor]);
+
+    useEffect(() => {
+        textColorRef.current = textColor;
+    }, [textColor]);
+
+    useEffect(() => {
+        highlightTextColorRef.current = highlightTextColor;
+    }, [highlightTextColor]);
 
     useEffect(() => {
         diceRef.current.forEach((die) => {
