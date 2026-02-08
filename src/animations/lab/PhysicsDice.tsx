@@ -236,6 +236,9 @@ const createPolyhedronDice = (geometry: THREE.BufferGeometry, sides: number, for
 };
 
 const createCustomPolyhedron = (vertices: Vec3[], faces: number[][], sides: number) => {
+    const centroid = vertices.reduce((acc, vertex) => acc.vadd(vertex), new Vec3(0, 0, 0));
+    centroid.scale(1 / Math.max(vertices.length, 1), centroid);
+
     const positions: number[] = [];
     const uvs: number[] = [];
 
@@ -249,28 +252,46 @@ const createCustomPolyhedron = (vertices: Vec3[], faces: number[][], sides: numb
     const geometry = new THREE.BufferGeometry();
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
     geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
-    geometry.setIndex(faces.flat());
-    geometry.computeVertexNormals();
-    geometry.computeBoundingSphere();
-    const radius = geometry.boundingSphere?.radius ?? 0.6;
 
-    const triangleNormals = faces.map((face) => {
+    const correctedFaces: number[][] = [];
+    const triangleNormals: Vec3[] = [];
+
+    faces.forEach((face) => {
         const a = vertices[face[0]];
         const b = vertices[face[1]];
         const c = vertices[face[2]];
         const normal = b.vsub(a).cross(c.vsub(a));
         normal.normalize();
-        return normal;
+        const faceCenter = new Vec3(
+            (a.x + b.x + c.x) / 3,
+            (a.y + b.y + c.y) / 3,
+            (a.z + b.z + c.z) / 3
+        );
+        const outward = faceCenter.vsub(centroid);
+
+        if (normal.dot(outward) < 0) {
+            correctedFaces.push([face[0], face[2], face[1]]);
+            normal.scale(-1, normal);
+        } else {
+            correctedFaces.push([face[0], face[1], face[2]]);
+        }
+
+        triangleNormals.push(normal);
     });
 
+    geometry.setIndex(correctedFaces.flat());
+    geometry.computeVertexNormals();
+    geometry.computeBoundingSphere();
+    const radius = geometry.boundingSphere?.radius ?? 0.6;
+
     applyFaceGroups(geometry, triangleNormals.map((_, index) => index));
-    const values = faces.map((_, index) => index + 1);
+    const values = correctedFaces.map((_, index) => index + 1);
 
     const faceDefs = triangleNormals.map((normal, index) => ({ normal, value: values[index] }));
     const faceOffsets = computeFaceOffsets(geometry, faceDefs);
     return {
         geometry,
-        shape: new ConvexPolyhedron({ vertices, faces }),
+        shape: new ConvexPolyhedron({ vertices, faces: correctedFaces }),
         faces: faceDefs,
         materials: createDiceMaterials(values, sides),
         faceOffsets,
@@ -322,7 +343,15 @@ const createDiceDefinition = (sides: number): DiceDefinition => {
                 faces.push([0, 2 + i, 2 + next]);
                 faces.push([1, 2 + next, 2 + i]);
             }
-            return createCustomPolyhedron(vertices, faces, sides);
+            const definition = createCustomPolyhedron(vertices, faces, sides);
+            definition.materials.forEach((material) => {
+                if (material instanceof THREE.MeshStandardMaterial) {
+                    material.flatShading = true;
+                    material.side = THREE.FrontSide;
+                    material.needsUpdate = true;
+                }
+            });
+            return definition;
         }
         case 12: {
             const geometry = new THREE.DodecahedronGeometry(0.7);
@@ -574,6 +603,33 @@ const PhysicsDice = ({
                         desiredRight: edgeDir,
                         value: d4VertexValues?.[vertex.index] ?? value,
                     });
+                });
+            } else if (sides === 10) {
+                const faceVerts = getFaceVertices(faceIndex);
+                const faceCenter = faceVerts
+                    .reduce((acc, vertex) => acc.add(vertex.position), new THREE.Vector3())
+                    .multiplyScalar(faceVerts.length > 0 ? 1 / faceVerts.length : 1);
+                const lift = offset - normalVec.dot(faceCenter);
+                const topVertex = faceVerts.find((vertex) => vertex.index === 0);
+                const bottomVertex = faceVerts.find((vertex) => vertex.index === 1);
+                const poleVertex = topVertex ?? bottomVertex ?? faceVerts[0];
+                const otherVerts = faceVerts.filter((vertex) => vertex !== poleVertex);
+                const desiredUp = poleVertex
+                    ? poleVertex.position.clone().sub(faceCenter).projectOnPlane(normalVec).normalize()
+                    : undefined;
+                const desiredRight =
+                    otherVerts.length >= 2
+                        ? otherVerts[1].position
+                            .clone()
+                            .sub(otherVerts[0].position)
+                            .projectOnPlane(normalVec)
+                            .normalize()
+                        : undefined;
+                plateTargets.push({
+                    position: faceCenter.clone().add(normalVec.clone().multiplyScalar(lift)),
+                    desiredUp,
+                    desiredRight,
+                    value,
                 });
             } else {
                 plateTargets.push({ position: normalVec.clone().multiplyScalar(offset), value });
