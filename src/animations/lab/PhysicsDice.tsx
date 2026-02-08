@@ -11,6 +11,9 @@ type PhysicsDiceProps = {
     collisionSoundUrl?: string;
     collisionSoundUrls?: string[];
     collisionVolume?: number;
+    tableHalfSize?: number;
+    tableWallHeight?: number;
+    tableCeilingHeight?: number;
     onResults?: (results: number[]) => void;
 };
 
@@ -274,6 +277,9 @@ const PhysicsDice = ({
     collisionSoundUrl,
     collisionSoundUrls,
     collisionVolume = 0.6,
+    tableHalfSize = 5.5,
+    tableWallHeight = 2.5,
+    tableCeilingHeight = 6,
     onResults,
 }: PhysicsDiceProps) => {
     const containerRef = useRef<HTMLDivElement | null>(null);
@@ -496,8 +502,9 @@ const PhysicsDice = ({
         floorBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);
         world.addBody(floorBody);
 
+        const floorSize = tableHalfSize * 2 + 2;
         const floor = new THREE.Mesh(
-            new THREE.PlaneGeometry(20, 20),
+            new THREE.PlaneGeometry(floorSize, floorSize),
             new THREE.MeshStandardMaterial({
                 color: '#1c1f26',
                 roughness: 0.9,
@@ -509,8 +516,8 @@ const PhysicsDice = ({
         scene.add(floor);
 
         const wallThickness = 0.25;
-        const wallHeight = 2.5;
-        const halfSize = 6.5;
+        const wallHeight = tableWallHeight;
+        const halfSize = tableHalfSize;
         const wallShapeH = new Box(new Vec3(halfSize, wallHeight, wallThickness));
         const wallShapeV = new Box(new Vec3(wallThickness, wallHeight, halfSize));
 
@@ -526,6 +533,73 @@ const PhysicsDice = ({
             wallBody.position.set(x, y, z);
             world.addBody(wallBody);
         });
+
+        const ceilingThickness = 0.2;
+        const ceilingShape = new Box(new Vec3(halfSize, ceilingThickness, halfSize));
+        const ceilingBody = new Body({ mass: 0, material: floorMaterial, shape: ceilingShape });
+        ceilingBody.position.set(0, tableCeilingHeight, 0);
+        world.addBody(ceilingBody);
+
+        const borderGeometry = new THREE.BoxGeometry(halfSize * 2, 0.02, halfSize * 2);
+        const borderEdges = new THREE.EdgesGeometry(borderGeometry);
+        const borderLines = new THREE.LineSegments(
+            borderEdges,
+            new THREE.LineBasicMaterial({ color: '#7f8cff', transparent: true, opacity: 0.6 })
+        );
+        borderLines.position.set(0, 0.01, 0);
+        scene.add(borderLines);
+
+        const createWallGradientTexture = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = 32;
+            canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            if (!ctx) return new THREE.CanvasTexture(canvas);
+
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, 'rgba(0, 255, 212, 0)');
+            gradient.addColorStop(0.4, 'rgba(0, 255, 212, 0)');
+            gradient.addColorStop(0.7, 'rgba(0, 255, 212, 0.12)');
+            gradient.addColorStop(1, 'rgba(0, 255, 212, 0.35)');
+
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const texture = new THREE.CanvasTexture(canvas);
+            texture.needsUpdate = true;
+            return texture;
+        };
+
+        const wallTexture = createWallGradientTexture();
+        const wallMaterial = new THREE.MeshBasicMaterial({
+            map: wallTexture,
+            transparent: true,
+            depthWrite: false,
+            side: THREE.DoubleSide,
+        });
+
+        const wallWidth = halfSize * 2;
+        const wallGeometryH = new THREE.PlaneGeometry(wallWidth, wallHeight);
+        const wallGeometryV = new THREE.PlaneGeometry(wallWidth, wallHeight);
+
+        const wallNorth = new THREE.Mesh(wallGeometryH, wallMaterial);
+        wallNorth.position.set(0, wallHeight / 2, -halfSize);
+        scene.add(wallNorth);
+
+        const wallSouth = new THREE.Mesh(wallGeometryH, wallMaterial);
+        wallSouth.position.set(0, wallHeight / 2, halfSize);
+        wallSouth.rotation.y = Math.PI;
+        scene.add(wallSouth);
+
+        const wallWest = new THREE.Mesh(wallGeometryV, wallMaterial);
+        wallWest.position.set(-halfSize, wallHeight / 2, 0);
+        wallWest.rotation.y = Math.PI / 2;
+        scene.add(wallWest);
+
+        const wallEast = new THREE.Mesh(wallGeometryV, wallMaterial);
+        wallEast.position.set(halfSize, wallHeight / 2, 0);
+        wallEast.rotation.y = -Math.PI / 2;
+        scene.add(wallEast);
 
         const ambient = new THREE.AmbientLight('#ffffff', 0.5);
         scene.add(ambient);

@@ -90,6 +90,9 @@ const AnimLab = () => {
         rollKey={rollKey}
         collisionSoundUrls={perDieSounds}
         collisionVolume={collisionVolume}
+        tableHalfSize={5}
+        tableWallHeight={2.4}
+        tableCeilingHeight={6}
         onResults={setResults}
       />
       {results.length > 0 && (
