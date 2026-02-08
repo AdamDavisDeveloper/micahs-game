@@ -39,7 +39,7 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    color: #e6e8ff;
+    color: #000000;
     font-weight: 600;
 }
 
@@ -57,7 +57,31 @@
     display: flex;
     flex-direction: column;
     gap: 6px;
-    color: #e6e8ff;
+    color: #000000;
+}
+
+.animlab-sound-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.animlab-remove {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #000000;
+    border-radius: 8px;
+    width: 24px;
+    height: 24px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.animlab-remove:hover {
+    background: rgba(255, 255, 255, 0.08);
 }
 
 .animlab-sound-select select {

@@ -29,10 +29,6 @@ const AnimLab = () => {
       const next = Array.from({ length: diceCount }, (_, index) => prev[index] ?? diceHitOneUrl);
       return next;
     });
-    setDiceSides((prev) => {
-      const next = Array.from({ length: diceCount }, (_, index) => prev[index] ?? 6);
-      return next;
-    });
   }, [diceCount]);
 
   const handleRoll = () => setRollKey((prev) => prev + 1);
@@ -43,35 +39,65 @@ const AnimLab = () => {
         <button type="button" onClick={handleRoll}>
           Roll Dice
         </button>
-        <button type="button" onClick={() => setDiceSides(Array(diceCount).fill(4))}>
-          D4
+        <button
+          type="button"
+          onClick={() => {
+            setDiceSides((prev) => [...prev, 4]);
+            setPerDieSounds((prev) => [...prev, prev[prev.length - 1] ?? diceHitOneUrl]);
+            setDiceCount((prev) => prev + 1);
+          }}
+        >
+          Add D4
         </button>
-        <button type="button" onClick={() => setDiceSides(Array(diceCount).fill(6))}>
-          D6
+        <button
+          type="button"
+          onClick={() => {
+            setDiceSides((prev) => [...prev, 6]);
+            setPerDieSounds((prev) => [...prev, prev[prev.length - 1] ?? diceHitOneUrl]);
+            setDiceCount((prev) => prev + 1);
+          }}
+        >
+          Add D6
         </button>
-        <button type="button" onClick={() => setDiceSides(Array(diceCount).fill(8))}>
-          D8
+        <button
+          type="button"
+          onClick={() => {
+            setDiceSides((prev) => [...prev, 8]);
+            setPerDieSounds((prev) => [...prev, prev[prev.length - 1] ?? diceHitOneUrl]);
+            setDiceCount((prev) => prev + 1);
+          }}
+        >
+          Add D8
         </button>
-        <button type="button" onClick={() => setDiceSides(Array(diceCount).fill(10))}>
-          D10
+        <button
+          type="button"
+          onClick={() => {
+            setDiceSides((prev) => [...prev, 10]);
+            setPerDieSounds((prev) => [...prev, prev[prev.length - 1] ?? diceHitOneUrl]);
+            setDiceCount((prev) => prev + 1);
+          }}
+        >
+          Add D10
         </button>
-        <button type="button" onClick={() => setDiceSides(Array(diceCount).fill(12))}>
-          D12
+        <button
+          type="button"
+          onClick={() => {
+            setDiceSides((prev) => [...prev, 12]);
+            setPerDieSounds((prev) => [...prev, prev[prev.length - 1] ?? diceHitOneUrl]);
+            setDiceCount((prev) => prev + 1);
+          }}
+        >
+          Add D12
         </button>
-        <button type="button" onClick={() => setDiceSides(Array(diceCount).fill(20))}>
-          D20
-        </button>
-        <button type="button" onClick={() => setDiceCount(1)}>
-          1 Die
-        </button>
-        <button type="button" onClick={() => setDiceCount(2)}>
-          2 Dice
-        </button>
-        <button type="button" onClick={() => setDiceCount(3)}>
-          3 Dice
-        </button>
-        <button type="button" onClick={() => setDiceCount(4)}>
-          4 Dice
+        <button
+          type="button"
+          onClick={() => {
+            setDiceSides((prev) => [...prev, 20]);
+            setPerDieSounds((prev) => [...prev, prev[prev.length - 1] ?? diceHitOneUrl]);
+            setDiceCount((prev) => prev + 1);
+          }}
+        >
+          Add D20
         </button>
       </div>
       <div className="animlab-controls">
@@ -89,8 +115,23 @@ const AnimLab = () => {
       </div>
       <div className="animlab-sounds">
         {perDieSounds.map((sound, index) => (
-          <label key={`die-sound-${index}`} className="animlab-sound-select">
-            Die {index + 1}
+          <div key={`die-sound-${index}`} className="animlab-sound-select">
+            <div className="animlab-sound-header">
+              <span>Die {index + 1}</span>
+              <button
+                type="button"
+                className="animlab-remove"
+                onClick={() => {
+                  if (diceSides.length <= 1) return;
+                  setPerDieSounds((prev) => prev.filter((_, i) => i !== index));
+                  setDiceSides((prev) => prev.filter((_, i) => i !== index));
+                  setDiceCount((prev) => Math.max(prev - 1, 1));
+                }}
+                aria-label={`Remove die ${index + 1}`}
+              >
+                ✕
+              </button>
+            </div>
             <select
               value={sound}
               onChange={(event) => {
@@ -105,7 +146,7 @@ const AnimLab = () => {
                 </option>
               ))}
             </select>
-          </label>
+          </div>
         ))}
       </div>
       <PhysicsDice
@@ -118,6 +159,7 @@ const AnimLab = () => {
         tableWallHeight={2.4}
         tableCeilingHeight={6}
         results={results}
+        autoRollOnSetup={false}
         onResults={setResults}
       />
       {results.length > 0 && (

@@ -15,6 +15,7 @@ type PhysicsDiceProps = {
     tableCeilingHeight?: number;
     orbitSpeed?: number;
     results?: number[];
+    autoRollOnSetup?: boolean;
     onResults?: (results: number[]) => void;
 };
 
@@ -333,6 +334,7 @@ const PhysicsDice = ({
     tableCeilingHeight = 6,
     orbitSpeed = 0.12,
     results,
+    autoRollOnSetup = true,
     onResults,
 }: PhysicsDiceProps) => {
     const containerRef = useRef<HTMLDivElement | null>(null);
@@ -390,76 +392,116 @@ const PhysicsDice = ({
         diceRef.current = [];
     };
 
+    const removeDieAt = (index: number) => {
+        if (!sceneRef.current || !worldRef.current) return;
+        const die = diceRef.current[index];
+        if (!die) return;
+        const { mesh, body, collideHandler, facePlates } = die;
+        sceneRef.current?.remove(mesh);
+        facePlates?.forEach((plate) => {
+            if (plate.material instanceof THREE.MeshBasicMaterial) {
+                plate.material.map?.dispose();
+                plate.material.dispose();
+            }
+        });
+        if (collideHandler) body.removeEventListener('collide', collideHandler);
+        worldRef.current?.removeBody(body);
+        mesh.geometry.dispose();
+        if (Array.isArray(mesh.material)) {
+            mesh.material.forEach((mat: THREE.Material) => mat.dispose());
+        } else {
+            mesh.material.dispose();
+        }
+        diceRef.current.splice(index, 1);
+    };
+
+    const playImpactSound = (impact: number, soundUrl?: string) => {
+        if (!soundUrl) return;
+        const pool = audioPoolRef.current[soundUrl];
+        if (!pool || pool.length === 0) return;
+        const now = performance.now();
+        if (now - lastSoundTimeRef.current < 80) return;
+        if (impact < 1.2) return;
+
+        lastSoundTimeRef.current = now;
+        const volume = Math.min(Math.max((impact / 12) * collisionVolume, 0), 1);
+        const audio = pool[audioIndexRef.current % pool.length];
+        audioIndexRef.current = (audioIndexRef.current + 1) % pool.length;
+        audio.volume = volume;
+        audio.currentTime = 0;
+        void audio.play();
+    };
+
+    const createDie = (sides: number, index: number, diceMaterial: Material, dropFromAbove: boolean) => {
+        const { geometry, shape, faces, materials, radius, faceOffsets } = createDiceDefinition(sides);
+        const mesh = new THREE.Mesh(geometry, materials);
+        mesh.castShadow = true;
+        mesh.receiveShadow = true;
+        mesh.position.set(
+            (index - (resolvedSides.length - 1) / 2) * 1.6,
+            dropFromAbove ? 3.5 + index * 0.2 : 1.2,
+            (Math.random() - 0.5) * 1.6
+        );
+        sceneRef.current?.add(mesh);
+
+        const facePlates: THREE.Mesh[] = [];
+        const plateSize = radius * 0.9;
+        const plateGeometry = new THREE.PlaneGeometry(plateSize, plateSize);
+        faces.forEach(({ normal, value }, faceIndex) => {
+            const texture = createFaceTexture(value, sides);
+            const plateMaterial = new THREE.MeshBasicMaterial({
+                map: texture,
+                transparent: true,
+                polygonOffset: true,
+                polygonOffsetFactor: -1,
+                polygonOffsetUnits: -1,
+            });
+            const plate = new THREE.Mesh(plateGeometry, plateMaterial);
+            const faceOffset = faceOffsets?.[faceIndex] ?? radius * 0.88;
+            const offset = faceOffset * 1.03;
+            plate.position.set(normal.x * offset, normal.y * offset, normal.z * offset);
+            plateQuatRef.current.setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal);
+            plate.quaternion.copy(plateQuatRef.current);
+            mesh.add(plate);
+            facePlates.push(plate);
+        });
+        const body = new Body({
+            mass: 1,
+            shape,
+            material: diceMaterial,
+        });
+        body.position.set(mesh.position.x, mesh.position.y, mesh.position.z);
+        body.angularDamping = 0.35;
+        body.linearDamping = 0.2;
+        body.allowSleep = true;
+        body.sleepSpeedLimit = 0.15;
+        body.sleepTimeLimit = 0.4;
+        worldRef.current?.addBody(body);
+        const die: DiceInstance = {
+            mesh,
+            body,
+            faces,
+            soundUrl: collisionSoundUrls?.[index] ?? collisionSoundUrl,
+            facePlates,
+            faceOffsets,
+            radius,
+        };
+        const collideHandler = (event: { contact?: { getImpactVelocityAlongNormal: () => number } }) => {
+            const impact = event.contact?.getImpactVelocityAlongNormal?.() ?? 0;
+            playImpactSound(Math.abs(impact), die.soundUrl);
+        };
+        body.addEventListener('collide', collideHandler);
+        die.collideHandler = collideHandler;
+
+        diceRef.current.push(die);
+    };
+
     const createDiceSet = (sidesList: number[], diceMaterial: Material) => {
         if (!sceneRef.current || !worldRef.current) return;
         clearDice();
 
-        const playImpactSound = (impact: number, soundUrl?: string) => {
-            if (!soundUrl) return;
-            const pool = audioPoolRef.current[soundUrl];
-            if (!pool || pool.length === 0) return;
-            const now = performance.now();
-            if (now - lastSoundTimeRef.current < 80) return;
-            if (impact < 1.2) return;
-
-            lastSoundTimeRef.current = now;
-            const volume = Math.min(Math.max((impact / 12) * collisionVolume, 0), 1);
-            const audio = pool[audioIndexRef.current % pool.length];
-            audioIndexRef.current = (audioIndexRef.current + 1) % pool.length;
-            audio.volume = volume;
-            audio.currentTime = 0;
-            void audio.play();
-        };
-
         sidesList.forEach((sides, index) => {
-            const { geometry, shape, faces, materials, radius, faceOffsets } = createDiceDefinition(sides);
-            const mesh = new THREE.Mesh(geometry, materials);
-            mesh.castShadow = true;
-            mesh.receiveShadow = true;
-            mesh.position.set((index - (sidesList.length - 1) / 2) * 1.6, 2.5 + index * 0.2, (Math.random() - 0.5) * 1.6);
-            sceneRef.current?.add(mesh);
-
-            const facePlates: THREE.Mesh[] = [];
-            const plateSize = radius * 0.9;
-            const plateGeometry = new THREE.PlaneGeometry(plateSize, plateSize);
-            faces.forEach(({ normal, value }, faceIndex) => {
-                const texture = createFaceTexture(value, sides);
-                const plateMaterial = new THREE.MeshBasicMaterial({
-                    map: texture,
-                    transparent: true,
-                    polygonOffset: true,
-                    polygonOffsetFactor: -1,
-                    polygonOffsetUnits: -1,
-                });
-                const plate = new THREE.Mesh(plateGeometry, plateMaterial);
-                const faceOffset = faceOffsets?.[faceIndex] ?? radius * 0.88;
-                const offset = faceOffset * 1.03;
-                plate.position.set(normal.x * offset, normal.y * offset, normal.z * offset);
-                plateQuatRef.current.setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal);
-                plate.quaternion.copy(plateQuatRef.current);
-                mesh.add(plate);
-                facePlates.push(plate);
-            });
-            const body = new Body({
-                mass: 1,
-                shape,
-                material: diceMaterial,
-            });
-            body.position.set(mesh.position.x, mesh.position.y, mesh.position.z);
-            body.angularDamping = 0.35;
-            body.linearDamping = 0.2;
-            body.allowSleep = true;
-            body.sleepSpeedLimit = 0.15;
-            body.sleepTimeLimit = 0.4;
-            worldRef.current?.addBody(body);
-            const soundUrl = collisionSoundUrls?.[index] ?? collisionSoundUrl;
-            const collideHandler = (event: { contact?: { getImpactVelocityAlongNormal: () => number } }) => {
-                const impact = event.contact?.getImpactVelocityAlongNormal?.() ?? 0;
-                playImpactSound(Math.abs(impact), soundUrl);
-            };
-            body.addEventListener('collide', collideHandler);
-
-            diceRef.current.push({ mesh, body, faces, collideHandler, soundUrl, facePlates, faceOffsets, radius });
+            createDie(sides, index, diceMaterial, true);
         });
     };
 
@@ -470,10 +512,9 @@ const PhysicsDice = ({
             ? new Vec3(impulseDirection.x * 6, 6 + Math.random() * 2, impulseDirection.z * 6)
             : new Vec3((Math.random() - 0.5) * 6, 7 + Math.random() * 2, (Math.random() - 0.5) * 6);
 
-        diceRef.current.forEach(({ body }, index) => {
+        diceRef.current.forEach(({ body }) => {
             body.velocity.setZero();
             body.angularVelocity.setZero();
-            body.position.set((index - (diceRef.current.length - 1) / 2) * 1.5, 3.5 + index * 0.2, (Math.random() - 0.5) * 2);
             body.quaternion.setFromEuler(
                 Math.random() * Math.PI,
                 Math.random() * Math.PI,
@@ -497,6 +538,7 @@ const PhysicsDice = ({
         settleFramesRef.current = 0;
         resultEmittedRef.current = false;
         zoomOutRef.current = false;
+        lastTimeRef.current = performance.now();
 
         // keep current camera target to avoid jump on roll
         orbitAngleRef.current = Math.random() * Math.PI * 2;
@@ -715,7 +757,7 @@ const PhysicsDice = ({
 
         const animate = () => {
             const now = performance.now();
-            const delta = (now - lastTimeRef.current) / 1000;
+            const delta = Math.min((now - lastTimeRef.current) / 1000, 1 / 30);
             lastTimeRef.current = now;
             world.step(1 / 60, delta, 3);
 
@@ -869,10 +911,32 @@ const PhysicsDice = ({
         if (!worldRef.current) return;
         const diceMaterial = worldRef.current.bodies.find((body) => body.material?.name === 'dice')?.material;
         if (diceMaterial instanceof Material) {
-            createDiceSet(resolvedSides, diceMaterial);
-            rollDice();
+            const currentCount = diceRef.current.length;
+            if (currentCount === 0) {
+                createDiceSet(resolvedSides, diceMaterial);
+                if (autoRollOnSetup) {
+                    rollDice();
+                }
+                return;
+            }
+
+            if (resolvedSides.length > currentCount) {
+                for (let i = currentCount; i < resolvedSides.length; i += 1) {
+                    createDie(resolvedSides[i], i, diceMaterial, true);
+                }
+            } else if (resolvedSides.length < currentCount) {
+                for (let i = currentCount - 1; i >= resolvedSides.length; i -= 1) {
+                    removeDieAt(i);
+                }
+            }
         }
     }, [resolvedSides, collisionSoundUrls, collisionSoundUrl]);
+
+    useEffect(() => {
+        diceRef.current.forEach((die, index) => {
+            die.soundUrl = collisionSoundUrls?.[index] ?? collisionSoundUrl;
+        });
+    }, [collisionSoundUrls, collisionSoundUrl]);
 
     useEffect(() => {
         if (!worldRef.current) return;
