@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef } from 'react';
 import * as THREE from 'three';
 import { Body, Box, ContactMaterial, ConvexPolyhedron, Material, Plane, Vec3, World } from 'cannon-es';
-import gsap from 'gsap';
 import './PhysicsDice.scss';
 
 type PhysicsDiceProps = {
@@ -14,6 +13,7 @@ type PhysicsDiceProps = {
     tableHalfSize?: number;
     tableWallHeight?: number;
     tableCeilingHeight?: number;
+    orbitSpeed?: number;
     onResults?: (results: number[]) => void;
 };
 
@@ -280,6 +280,7 @@ const PhysicsDice = ({
     tableHalfSize = 5.5,
     tableWallHeight = 2.5,
     tableCeilingHeight = 6,
+    orbitSpeed = 0.12,
     onResults,
 }: PhysicsDiceProps) => {
     const containerRef = useRef<HTMLDivElement | null>(null);
@@ -297,6 +298,17 @@ const PhysicsDice = ({
     const audioIndexRef = useRef(0);
     const lastSoundTimeRef = useRef(0);
     const audioPrimedRef = useRef(false);
+    const boundsRef = useRef(new THREE.Box3());
+    const boundsSphereRef = useRef(new THREE.Sphere());
+    const cameraTargetRef = useRef(new THREE.Vector3());
+    const cameraDesiredRef = useRef(new THREE.Vector3());
+    const cameraDirRef = useRef(new THREE.Vector3(1, 0.9, 1));
+    const tableCenterRef = useRef(new THREE.Vector3(0, 0, 0));
+    const zoomOutRef = useRef(false);
+    const initialCameraPosRef = useRef(new THREE.Vector3(6, 7.5, 9));
+    const initialCameraTargetRef = useRef(new THREE.Vector3(0, 0, 0));
+    const orbitAngleRef = useRef(0);
+    const zoomOutDirRef = useRef(new THREE.Vector3(1, 0.9, 1));
 
     const resolvedSides = useMemo(() => {
         if (diceSides && diceSides.length > 0) return diceSides;
@@ -403,18 +415,16 @@ const PhysicsDice = ({
 
         settleFramesRef.current = 0;
         resultEmittedRef.current = false;
+        zoomOutRef.current = false;
 
         const camera = cameraRef.current;
         if (camera) {
-            gsap.to(camera.position, {
-                x: 6 + (Math.random() - 0.5) * 2,
-                y: 7.5 + Math.random() * 1.5,
-                z: 9 + (Math.random() - 0.5) * 2,
-                duration: 0.7,
-                ease: 'power2.out',
-                onUpdate: () => camera.lookAt(0, 0, 0),
-            });
+            camera.position.copy(initialCameraPosRef.current);
+            camera.lookAt(initialCameraTargetRef.current);
+            cameraTargetRef.current.copy(initialCameraTargetRef.current);
         }
+        orbitAngleRef.current = Math.random() * Math.PI * 2;
+
     };
 
     const primeAudio = () => {
@@ -638,6 +648,74 @@ const PhysicsDice = ({
                 mesh.quaternion.set(body.quaternion.x, body.quaternion.y, body.quaternion.z, body.quaternion.w);
             });
 
+            const camera = cameraRef.current;
+            if (camera && diceRef.current.length > 0) {
+                if (zoomOutRef.current) {
+                    const center = tableCenterRef.current;
+                    const initialDir = initialCameraPosRef.current.clone().sub(center);
+                    const initialDistance = initialDir.length();
+                    const heightRatio = initialDistance > 0 ? initialDir.y / initialDistance : 0.6;
+
+                    const dir = zoomOutDirRef.current;
+                    if (dir.lengthSq() < 0.0001) {
+                        dir.set(1, 0.9, 1);
+                    }
+                    const azimuth = Math.atan2(dir.z, dir.x);
+                    dir.set(Math.cos(azimuth), heightRatio, Math.sin(azimuth)).normalize();
+
+                    const desired = cameraDesiredRef.current;
+                    desired.copy(center).addScaledVector(dir, initialDistance);
+                    desired.y = Math.max(desired.y, 2.6);
+
+                    cameraTargetRef.current.lerp(initialCameraTargetRef.current, 0.02);
+                    camera.position.lerp(desired, 0.012);
+                    camera.lookAt(cameraTargetRef.current);
+                } else {
+                    const bounds = boundsRef.current;
+                    bounds.makeEmpty();
+                    diceRef.current.forEach(({ mesh }) => bounds.expandByPoint(mesh.position));
+                    bounds.getBoundingSphere(boundsSphereRef.current);
+
+                    const center = boundsSphereRef.current.center;
+                    const radius = Math.max(boundsSphereRef.current.radius, 0.5);
+                    const isSingle = diceRef.current.length === 1;
+                    const padding = isSingle ? 2.6 : 2.8;
+                    const fov = THREE.MathUtils.degToRad(camera.fov);
+                    const minDistance = isSingle ? 4.5 : 6;
+                    const maxDistance = isSingle ? 8 : 12;
+                    const distance = Math.min(
+                        Math.max((radius * padding) / Math.sin(fov / 2), minDistance),
+                        maxDistance
+                    );
+
+                    const dir = cameraDirRef.current;
+                    if (orbitSpeed > 0) {
+                        orbitAngleRef.current += orbitSpeed * delta;
+                        dir.set(Math.cos(orbitAngleRef.current), 0.9, Math.sin(orbitAngleRef.current));
+                    } else {
+                        dir.copy(camera.position).sub(center);
+                        if (dir.lengthSq() < 0.0001) {
+                            dir.set(1, 0.9, 1);
+                        }
+                    }
+                    dir.normalize();
+
+                    const desired = cameraDesiredRef.current;
+                    desired.copy(center).addScaledVector(dir, distance);
+                    desired.y = Math.max(desired.y, 2.6);
+
+                    const target = cameraTargetRef.current;
+                    const targetDeadZone = 0.7;
+                    const targetDelta = target.distanceTo(center);
+                    if (targetDelta > targetDeadZone) {
+                        target.lerp(center, 0.015);
+                    }
+
+                    camera.position.lerp(desired, 0.006);
+                    camera.lookAt(target);
+                }
+            }
+
             const allStopped = diceRef.current.every(({ body }) => {
                 const speed = body.velocity.length();
                 const spin = body.angularVelocity.length();
@@ -653,10 +731,14 @@ const PhysicsDice = ({
             if (settleFramesRef.current > 30 && !resultEmittedRef.current) {
                 const results = diceRef.current.map(({ body, faces }) => getTopFaceValue(body, faces));
                 resultEmittedRef.current = true;
+                zoomOutRef.current = true;
+                zoomOutDirRef.current.copy(camera.position).sub(tableCenterRef.current).normalize();
                 onResults?.(results);
             }
 
-            renderer.render(scene, camera);
+            if (camera) {
+                renderer.render(scene, camera);
+            }
             animationRef.current = requestAnimationFrame(animate);
         };
 
