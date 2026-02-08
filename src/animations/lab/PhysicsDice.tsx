@@ -417,12 +417,7 @@ const PhysicsDice = ({
         resultEmittedRef.current = false;
         zoomOutRef.current = false;
 
-        const camera = cameraRef.current;
-        if (camera) {
-            camera.position.copy(initialCameraPosRef.current);
-            camera.lookAt(initialCameraTargetRef.current);
-            cameraTargetRef.current.copy(initialCameraTargetRef.current);
-        }
+        // keep current camera target to avoid jump on roll
         orbitAngleRef.current = Math.random() * Math.PI * 2;
 
     };
@@ -732,7 +727,9 @@ const PhysicsDice = ({
                 const results = diceRef.current.map(({ body, faces }) => getTopFaceValue(body, faces));
                 resultEmittedRef.current = true;
                 zoomOutRef.current = true;
-                zoomOutDirRef.current.copy(camera.position).sub(tableCenterRef.current).normalize();
+                if (camera) {
+                    zoomOutDirRef.current.copy(camera.position).sub(tableCenterRef.current).normalize();
+                }
                 onResults?.(results);
             }
 
