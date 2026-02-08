@@ -30,3 +30,13 @@
     font-size: 0.95rem;
     opacity: 0.85;
 }
+
+.physics-dice__results {
+    margin-top: 8px;
+    font-weight: 600;
+    color: #e6e8ff;
+    background: rgba(18, 20, 27, 0.75);
+    padding: 6px 10px;
+    border-radius: 10px;
+    width: fit-content;
+}

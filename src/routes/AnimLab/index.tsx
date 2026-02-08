@@ -16,6 +16,7 @@ const AnimLab = () => {
   const [results, setResults] = useState<number[]>([]);
   const [collisionVolume, setCollisionVolume] = useState(0.6);
   const [perDieSounds, setPerDieSounds] = useState<string[]>(Array(2).fill(diceHitOneUrl));
+  const [diceSides, setDiceSides] = useState<number[]>(Array(2).fill(6));
 
   const soundOptions: SoundOption[] = [
     { label: 'Dice hit 1', url: diceHitOneUrl },
@@ -28,6 +29,10 @@ const AnimLab = () => {
       const next = Array.from({ length: diceCount }, (_, index) => prev[index] ?? diceHitOneUrl);
       return next;
     });
+    setDiceSides((prev) => {
+      const next = Array.from({ length: diceCount }, (_, index) => prev[index] ?? 6);
+      return next;
+    });
   }, [diceCount]);
 
   const handleRoll = () => setRollKey((prev) => prev + 1);
@@ -37,6 +42,24 @@ const AnimLab = () => {
       <div className="animlab-controls">
         <button type="button" onClick={handleRoll}>
           Roll Dice
+        </button>
+        <button type="button" onClick={() => setDiceSides(Array(diceCount).fill(4))}>
+          D4
+        </button>
+        <button type="button" onClick={() => setDiceSides(Array(diceCount).fill(6))}>
+          D6
+        </button>
+        <button type="button" onClick={() => setDiceSides(Array(diceCount).fill(8))}>
+          D8
+        </button>
+        <button type="button" onClick={() => setDiceSides(Array(diceCount).fill(10))}>
+          D10
+        </button>
+        <button type="button" onClick={() => setDiceSides(Array(diceCount).fill(12))}>
+          D12
+        </button>
+        <button type="button" onClick={() => setDiceSides(Array(diceCount).fill(20))}>
+          D20
         </button>
         <button type="button" onClick={() => setDiceCount(1)}>
           1 Die
@@ -86,6 +109,7 @@ const AnimLab = () => {
         ))}
       </div>
       <PhysicsDice
+        diceSides={diceSides}
         diceCount={diceCount}
         rollKey={rollKey}
         collisionSoundUrls={perDieSounds}
@@ -93,6 +117,7 @@ const AnimLab = () => {
         tableHalfSize={5}
         tableWallHeight={2.4}
         tableCeilingHeight={6}
+        results={results}
         onResults={setResults}
       />
       {results.length > 0 && (

@@ -14,6 +14,7 @@ type PhysicsDiceProps = {
     tableWallHeight?: number;
     tableCeilingHeight?: number;
     orbitSpeed?: number;
+    results?: number[];
     onResults?: (results: number[]) => void;
 };
 
@@ -23,6 +24,9 @@ type DiceInstance = {
     faces: FaceNormal[];
     collideHandler?: (event: { contact?: { getImpactVelocityAlongNormal: () => number } }) => void;
     soundUrl?: string;
+    facePlates?: THREE.Mesh[];
+    faceOffsets?: number[];
+    radius: number;
 };
 
 type DiceDefinition = {
@@ -30,6 +34,8 @@ type DiceDefinition = {
     shape: Box | ConvexPolyhedron;
     faces: FaceNormal[];
     materials: THREE.Material[];
+    faceOffsets: number[];
+    radius: number;
 };
 
 type FaceNormal = {
@@ -54,17 +60,21 @@ const createFaceTexture = (value: number, sides: number) => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return new THREE.CanvasTexture(canvas);
 
-    ctx.fillStyle = '#f5f5f5';
-    ctx.fillRect(0, 0, size, size);
-    ctx.strokeStyle = '#141414';
-    ctx.lineWidth = 12;
-    ctx.strokeRect(0, 0, size, size);
+    ctx.clearRect(0, 0, size, size);
     ctx.fillStyle = '#141414';
-    const fontSize = sides > 12 ? 110 : sides > 8 ? 120 : 140;
-    ctx.font = `bold ${fontSize}px Arial`;
+    const label = String(value);
+    let fontSize = sides >= 20 ? 110 : sides >= 12 ? 120 : sides >= 10 ? 128 : 140;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(String(value), size / 2, size / 2);
+    ctx.font = `bold ${fontSize}px Arial`;
+
+    const maxWidth = size * 0.72;
+    while (ctx.measureText(label).width > maxWidth && fontSize > 64) {
+        fontSize -= 6;
+        ctx.font = `bold ${fontSize}px Arial`;
+    }
+
+    ctx.fillText(label, size / 2, size / 2);
 
     const texture = new THREE.CanvasTexture(canvas);
     texture.anisotropy = 8;
@@ -76,11 +86,28 @@ const createDiceMaterials = (values: number[], sides: number) =>
     values.map(
         (value) =>
             new THREE.MeshStandardMaterial({
-                map: createFaceTexture(value, sides),
+                color: '#f5f5f5',
                 roughness: 0.65,
                 metalness: 0.1,
             })
     );
+
+const computeFaceOffsets = (geometry: THREE.BufferGeometry, faces: FaceNormal[]) => {
+    const buffer = geometry.index ? geometry : geometry.toNonIndexed();
+    const position = buffer.attributes.position;
+    const offsets = faces.map((face) => {
+        let maxDot = -Infinity;
+        for (let i = 0; i < position.count; i += 1) {
+            const dot =
+                face.normal.x * position.getX(i) +
+                face.normal.y * position.getY(i) +
+                face.normal.z * position.getZ(i);
+            if (dot > maxDot) maxDot = dot;
+        }
+        return maxDot;
+    });
+    return offsets;
+};
 
 const getTopFaceValue = (body: Body, faces: FaceNormal[]) => {
     let maxY = -Infinity;
@@ -120,7 +147,9 @@ const buildConvexFromGeometry = (geometry: THREE.BufferGeometry) => {
         normals.push(normal);
     }
 
-    return { vertices, faces, triangleNormals: normals, geometry: buffer };
+    buffer.computeBoundingSphere();
+    const radius = buffer.boundingSphere?.radius ?? 0.5;
+    return { vertices, faces, triangleNormals: normals, geometry: buffer, radius };
 };
 
 const clusterFaceNormals = (triangleNormals: Vec3[]) => {
@@ -148,17 +177,20 @@ const applyFaceGroups = (geometry: THREE.BufferGeometry, triangleToCluster: numb
 };
 
 const createPolyhedronDice = (geometry: THREE.BufferGeometry, sides: number, forceClusterCount?: number) => {
-    const { vertices, faces, triangleNormals, geometry: buffer } = buildConvexFromGeometry(geometry);
+    const { vertices, faces, triangleNormals, geometry: buffer, radius } = buildConvexFromGeometry(geometry);
     const { clusters, triangleToCluster } = clusterFaceNormals(triangleNormals);
 
     if (forceClusterCount && clusters.length !== forceClusterCount) {
         applyFaceGroups(buffer, triangleNormals.map((_, index) => index));
         const values = Array.from({ length: triangleNormals.length }, (_, i) => i + 1);
+        const faceOffsets = computeFaceOffsets(buffer, triangleNormals.map((normal, i) => ({ normal, value: values[i] })));
         return {
             geometry: buffer,
             shape: new ConvexPolyhedron({ vertices, faces }),
             faces: triangleNormals.map((normal, i) => ({ normal, value: values[i] })),
             materials: createDiceMaterials(values, sides),
+            faceOffsets,
+            radius,
         };
     }
 
@@ -169,11 +201,14 @@ const createPolyhedronDice = (geometry: THREE.BufferGeometry, sides: number, for
         value: values[index],
     }));
 
+    const faceOffsets = computeFaceOffsets(buffer, faceNormals);
     return {
         geometry: buffer,
         shape: new ConvexPolyhedron({ vertices, faces }),
         faces: faceNormals,
         materials: createDiceMaterials(values, sides),
+        faceOffsets,
+        radius,
     };
 };
 
@@ -193,6 +228,8 @@ const createCustomPolyhedron = (vertices: Vec3[], faces: number[][], sides: numb
     geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
     geometry.setIndex(faces.flat());
     geometry.computeVertexNormals();
+    geometry.computeBoundingSphere();
+    const radius = geometry.boundingSphere?.radius ?? 0.6;
 
     const triangleNormals = faces.map((face) => {
         const a = vertices[face[0]];
@@ -206,11 +243,15 @@ const createCustomPolyhedron = (vertices: Vec3[], faces: number[][], sides: numb
     applyFaceGroups(geometry, triangleNormals.map((_, index) => index));
     const values = faces.map((_, index) => index + 1);
 
+    const faceDefs = triangleNormals.map((normal, index) => ({ normal, value: values[index] }));
+    const faceOffsets = computeFaceOffsets(geometry, faceDefs);
     return {
         geometry,
         shape: new ConvexPolyhedron({ vertices, faces }),
-        faces: triangleNormals.map((normal, index) => ({ normal, value: values[index] })),
+        faces: faceDefs,
         materials: createDiceMaterials(values, sides),
+        faceOffsets,
+        radius,
     };
 };
 
@@ -222,11 +263,16 @@ const createDiceDefinition = (sides: number): DiceDefinition => {
         }
         case 6: {
             const geometry = new THREE.BoxGeometry(1, 1, 1);
+            geometry.computeBoundingSphere();
+            const radius = geometry.boundingSphere?.radius ?? 0.5;
+            const faceOffsets = computeFaceOffsets(geometry, D6_FACE_NORMALS);
             return {
                 geometry,
                 shape: new Box(new Vec3(0.5, 0.5, 0.5)),
                 faces: D6_FACE_NORMALS,
                 materials: createDiceMaterials([3, 4, 1, 6, 2, 5], sides),
+                faceOffsets,
+                radius,
             };
         }
         case 8: {
@@ -260,11 +306,16 @@ const createDiceDefinition = (sides: number): DiceDefinition => {
         }
         default: {
             const geometry = new THREE.BoxGeometry(1, 1, 1);
+            geometry.computeBoundingSphere();
+            const radius = geometry.boundingSphere?.radius ?? 0.5;
+            const faceOffsets = computeFaceOffsets(geometry, D6_FACE_NORMALS);
             return {
                 geometry,
                 shape: new Box(new Vec3(0.5, 0.5, 0.5)),
                 faces: D6_FACE_NORMALS,
                 materials: createDiceMaterials([3, 4, 1, 6, 2, 5], 6),
+                faceOffsets,
+                radius,
             };
         }
     }
@@ -281,6 +332,7 @@ const PhysicsDice = ({
     tableWallHeight = 2.5,
     tableCeilingHeight = 6,
     orbitSpeed = 0.12,
+    results,
     onResults,
 }: PhysicsDiceProps) => {
     const containerRef = useRef<HTMLDivElement | null>(null);
@@ -309,6 +361,7 @@ const PhysicsDice = ({
     const initialCameraTargetRef = useRef(new THREE.Vector3(0, 0, 0));
     const orbitAngleRef = useRef(0);
     const zoomOutDirRef = useRef(new THREE.Vector3(1, 0.9, 1));
+    const plateQuatRef = useRef(new THREE.Quaternion());
 
     const resolvedSides = useMemo(() => {
         if (diceSides && diceSides.length > 0) return diceSides;
@@ -317,8 +370,14 @@ const PhysicsDice = ({
 
     const clearDice = () => {
         if (!sceneRef.current || !worldRef.current) return;
-        diceRef.current.forEach(({ mesh, body, collideHandler }) => {
+        diceRef.current.forEach(({ mesh, body, collideHandler, facePlates }) => {
             sceneRef.current?.remove(mesh);
+            facePlates?.forEach((plate) => {
+                if (plate.material instanceof THREE.MeshBasicMaterial) {
+                    plate.material.map?.dispose();
+                    plate.material.dispose();
+                }
+            });
             if (collideHandler) body.removeEventListener('collide', collideHandler);
             worldRef.current?.removeBody(body);
             mesh.geometry.dispose();
@@ -353,12 +412,34 @@ const PhysicsDice = ({
         };
 
         sidesList.forEach((sides, index) => {
-            const { geometry, shape, faces, materials } = createDiceDefinition(sides);
+            const { geometry, shape, faces, materials, radius, faceOffsets } = createDiceDefinition(sides);
             const mesh = new THREE.Mesh(geometry, materials);
             mesh.castShadow = true;
             mesh.receiveShadow = true;
             mesh.position.set((index - (sidesList.length - 1) / 2) * 1.6, 2.5 + index * 0.2, (Math.random() - 0.5) * 1.6);
             sceneRef.current?.add(mesh);
+
+            const facePlates: THREE.Mesh[] = [];
+            const plateSize = radius * 0.9;
+            const plateGeometry = new THREE.PlaneGeometry(plateSize, plateSize);
+            faces.forEach(({ normal, value }, faceIndex) => {
+                const texture = createFaceTexture(value, sides);
+                const plateMaterial = new THREE.MeshBasicMaterial({
+                    map: texture,
+                    transparent: true,
+                    polygonOffset: true,
+                    polygonOffsetFactor: -1,
+                    polygonOffsetUnits: -1,
+                });
+                const plate = new THREE.Mesh(plateGeometry, plateMaterial);
+                const faceOffset = faceOffsets?.[faceIndex] ?? radius * 0.88;
+                const offset = faceOffset * 1.03;
+                plate.position.set(normal.x * offset, normal.y * offset, normal.z * offset);
+                plateQuatRef.current.setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal);
+                plate.quaternion.copy(plateQuatRef.current);
+                mesh.add(plate);
+                facePlates.push(plate);
+            });
             const body = new Body({
                 mass: 1,
                 shape,
@@ -378,7 +459,7 @@ const PhysicsDice = ({
             };
             body.addEventListener('collide', collideHandler);
 
-            diceRef.current.push({ mesh, body, faces, collideHandler, soundUrl });
+            diceRef.current.push({ mesh, body, faces, collideHandler, soundUrl, facePlates, faceOffsets, radius });
         });
     };
 
@@ -802,6 +883,11 @@ const PhysicsDice = ({
         <div className="physics-dice" ref={containerRef}>
             <div className="physics-dice__overlay">
                 <div className="physics-dice__hint">Tap/click to roll. Swipe to throw.</div>
+                {results && results.length > 0 && (
+                    <div className="physics-dice__results">
+                        Result: {results.join(', ')} (Total {results.reduce((sum, value) => sum + value, 0)})
+                    </div>
+                )}
             </div>
         </div>
     );
