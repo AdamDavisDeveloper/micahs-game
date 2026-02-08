@@ -10,6 +10,19 @@ type PhysicsDiceProps = {
     collisionSoundUrl?: string;
     collisionSoundUrls?: string[];
     collisionVolume?: number;
+    diceColor?: string;
+    diceRoughness?: number;
+    diceMetalness?: number;
+    keyLightPosition?: { x: number; y: number; z: number };
+    keyLightTarget?: { x: number; y: number; z: number };
+    ambientLightColor?: string;
+    ambientLightIntensity?: number;
+    keyLightColor?: string;
+    keyLightIntensity?: number;
+    fillLightColor?: string;
+    fillLightIntensity?: number;
+    highlightTextColor?: string;
+    textColor?: string;
     tableHalfSize?: number;
     tableWallHeight?: number;
     tableCeilingHeight?: number;
@@ -119,18 +132,24 @@ const createFaceTexture = (value: number, sides: number) => {
         sides,
         lastColor: '',
     };
-    updateFaceTextureColor(faceTexture, '#141414');
+    updateFaceTextureColor(faceTexture, '#000000');
     return faceTexture;
 };
 
 
-const createDiceMaterials = (values: number[], sides: number) =>
+type DiceMaterialOptions = {
+    color: string;
+    roughness: number;
+    metalness: number;
+};
+
+const createDiceMaterials = (values: number[], sides: number, options: DiceMaterialOptions) =>
     values.map(
         (value) =>
             new THREE.MeshStandardMaterial({
-                color: '#f5f5f5',
-                roughness: 0.65,
-                metalness: 0.1,
+                color: options.color,
+                roughness: options.roughness,
+                metalness: options.metalness,
             })
     );
 
@@ -184,7 +203,7 @@ const getTopDieValue = (die: DiceInstance) => {
 
 const HIGHLIGHT_COLOR = new THREE.Color('#f7d070');
 const BASE_PLATE_COLOR = new THREE.Color('#ffffff');
-const BASE_TEXT_COLOR = new THREE.Color('#ffffff');
+const BASE_TEXT_COLOR = new THREE.Color('#000000');
 const HIGHLIGHT_TEXT_COLOR = new THREE.Color('#800080');
 
 const buildConvexFromGeometry = (geometry: THREE.BufferGeometry) => {
@@ -241,7 +260,12 @@ const applyFaceGroups = (geometry: THREE.BufferGeometry, triangleToCluster: numb
     }
 };
 
-const createPolyhedronDice = (geometry: THREE.BufferGeometry, sides: number, forceClusterCount?: number) => {
+const createPolyhedronDice = (
+    geometry: THREE.BufferGeometry,
+    sides: number,
+    materialOptions: DiceMaterialOptions,
+    forceClusterCount?: number
+) => {
     const { vertices, faces, triangleNormals, geometry: buffer, radius } = buildConvexFromGeometry(geometry);
     const { clusters, triangleToCluster } = clusterFaceNormals(triangleNormals);
 
@@ -253,7 +277,7 @@ const createPolyhedronDice = (geometry: THREE.BufferGeometry, sides: number, for
             geometry: buffer,
             shape: new ConvexPolyhedron({ vertices, faces }),
             faces: triangleNormals.map((normal, i) => ({ normal, value: values[i] })),
-            materials: createDiceMaterials(values, sides),
+            materials: createDiceMaterials(values, sides, materialOptions),
             faceOffsets,
             radius,
         };
@@ -271,13 +295,18 @@ const createPolyhedronDice = (geometry: THREE.BufferGeometry, sides: number, for
         geometry: buffer,
         shape: new ConvexPolyhedron({ vertices, faces }),
         faces: faceNormals,
-        materials: createDiceMaterials(values, sides),
+        materials: createDiceMaterials(values, sides, materialOptions),
         faceOffsets,
         radius,
     };
 };
 
-const createCustomPolyhedron = (vertices: Vec3[], faces: number[][], sides: number) => {
+const createCustomPolyhedron = (
+    vertices: Vec3[],
+    faces: number[][],
+    sides: number,
+    materialOptions: DiceMaterialOptions
+) => {
     const centroid = vertices.reduce((acc, vertex) => acc.vadd(vertex), new Vec3(0, 0, 0));
     centroid.scale(1 / Math.max(vertices.length, 1), centroid);
 
@@ -335,17 +364,17 @@ const createCustomPolyhedron = (vertices: Vec3[], faces: number[][], sides: numb
         geometry,
         shape: new ConvexPolyhedron({ vertices, faces: correctedFaces }),
         faces: faceDefs,
-        materials: createDiceMaterials(values, sides),
+        materials: createDiceMaterials(values, sides, materialOptions),
         faceOffsets,
         radius,
     };
 };
 
-const createDiceDefinition = (sides: number): DiceDefinition => {
+const createDiceDefinition = (sides: number, materialOptions: DiceMaterialOptions): DiceDefinition => {
     switch (sides) {
         case 4: {
             const geometry = new THREE.TetrahedronGeometry(0.78);
-            const definition = createPolyhedronDice(geometry, sides, 4);
+            const definition = createPolyhedronDice(geometry, sides, materialOptions, 4);
             return {
                 ...definition,
                 radius: definition.radius * 1.06,
@@ -361,14 +390,14 @@ const createDiceDefinition = (sides: number): DiceDefinition => {
                 geometry,
                 shape: new Box(new Vec3(0.5, 0.5, 0.5)),
                 faces: D6_FACE_NORMALS,
-                materials: createDiceMaterials([3, 4, 1, 6, 2, 5], sides),
+                materials: createDiceMaterials([3, 4, 1, 6, 2, 5], sides, materialOptions),
                 faceOffsets,
                 radius,
             };
         }
         case 8: {
             const geometry = new THREE.OctahedronGeometry(0.7);
-            return createPolyhedronDice(geometry, sides, 8);
+            return createPolyhedronDice(geometry, sides, materialOptions, 8);
         }
         case 10: {
             const top = new Vec3(0, 1, 0);
@@ -385,7 +414,7 @@ const createDiceDefinition = (sides: number): DiceDefinition => {
                 faces.push([0, 2 + i, 2 + next]);
                 faces.push([1, 2 + next, 2 + i]);
             }
-            const definition = createCustomPolyhedron(vertices, faces, sides);
+            const definition = createCustomPolyhedron(vertices, faces, sides, materialOptions);
             definition.materials.forEach((material) => {
                 if (material instanceof THREE.MeshStandardMaterial) {
                     material.flatShading = true;
@@ -397,11 +426,11 @@ const createDiceDefinition = (sides: number): DiceDefinition => {
         }
         case 12: {
             const geometry = new THREE.DodecahedronGeometry(0.7);
-            return createPolyhedronDice(geometry, sides, 12);
+            return createPolyhedronDice(geometry, sides, materialOptions, 12);
         }
         case 20: {
             const geometry = new THREE.IcosahedronGeometry(0.75);
-            return createPolyhedronDice(geometry, sides, 20);
+            return createPolyhedronDice(geometry, sides, materialOptions, 20);
         }
         default: {
             const geometry = new THREE.BoxGeometry(1, 1, 1);
@@ -412,7 +441,7 @@ const createDiceDefinition = (sides: number): DiceDefinition => {
                 geometry,
                 shape: new Box(new Vec3(0.5, 0.5, 0.5)),
                 faces: D6_FACE_NORMALS,
-                materials: createDiceMaterials([3, 4, 1, 6, 2, 5], 6),
+                materials: createDiceMaterials([3, 4, 1, 6, 2, 5], 6, materialOptions),
                 faceOffsets,
                 radius,
             };
@@ -427,6 +456,19 @@ const PhysicsDice = ({
     collisionSoundUrl,
     collisionSoundUrls,
     collisionVolume = 0.6,
+    diceColor = '#ffffff',
+    diceRoughness = 0.005,
+    diceMetalness = 0.1,
+    keyLightPosition = { x: 6, y: 10, z: 4 },
+    keyLightTarget = { x: 0, y: 0, z: 0 },
+    ambientLightColor = '#ffffff',
+    ambientLightIntensity = 0.85,
+    keyLightColor = '#ffffff',
+    keyLightIntensity = 1.45,
+    fillLightColor = '#ffffff',
+    fillLightIntensity = 0.75,
+    highlightTextColor = '#800080',
+    textColor = '#000000',
     tableHalfSize = 5.5,
     tableWallHeight = 2.5,
     tableCeilingHeight = 6,
@@ -441,6 +483,10 @@ const PhysicsDice = ({
     const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
     const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
     const sceneRef = useRef<THREE.Scene | null>(null);
+    const keyLightRef = useRef<THREE.DirectionalLight | null>(null);
+    const keyLightTargetRef = useRef<THREE.Object3D | null>(null);
+    const ambientLightRef = useRef<THREE.AmbientLight | null>(null);
+    const fillLightRef = useRef<THREE.DirectionalLight | null>(null);
     const animationRef = useRef<number | null>(null);
     const lastTimeRef = useRef<number>(performance.now());
     const settleFramesRef = useRef(0);
@@ -541,7 +587,7 @@ const PhysicsDice = ({
                 }
                 const faceTexture = plate.userData.faceTexture as FaceTexture | undefined;
                 if (faceTexture) {
-                    updateFaceTextureColor(faceTexture, BASE_TEXT_COLOR.getStyle());
+                    updateFaceTextureColor(faceTexture, new THREE.Color(textColor).getStyle());
                 }
             });
 
@@ -549,7 +595,15 @@ const PhysicsDice = ({
     };
 
     const createDie = (sides: number, index: number, diceMaterial: Material, dropFromAbove: boolean) => {
-        const { geometry, shape, faces, materials, radius, faceOffsets, collisionScale } = createDiceDefinition(sides);
+        const materialOptions: DiceMaterialOptions = {
+            color: diceColor,
+            roughness: diceRoughness,
+            metalness: diceMetalness,
+        };
+        const { geometry, shape, faces, materials, radius, faceOffsets, collisionScale } = createDiceDefinition(
+            sides,
+            materialOptions
+        );
         const mesh = new THREE.Mesh(geometry, materials);
         mesh.castShadow = true;
         mesh.receiveShadow = true;
@@ -697,6 +751,7 @@ const PhysicsDice = ({
 
             plateTargets.forEach(({ position, desiredUp, desiredRight, value: plateValue }) => {
                 const faceTexture = createFaceTexture(plateValue ?? value, sides);
+                updateFaceTextureColor(faceTexture, new THREE.Color(textColor).getStyle());
                 const plateMaterial = new THREE.MeshBasicMaterial({
                     map: faceTexture.texture,
                     ...plateMaterialOptions,
@@ -1004,18 +1059,26 @@ const PhysicsDice = ({
         wallEast.rotation.y = -Math.PI / 2;
         scene.add(wallEast);
 
-        const ambient = new THREE.AmbientLight('#ffffff', 0.5);
+        const ambient = new THREE.AmbientLight(ambientLightColor, ambientLightIntensity);
         scene.add(ambient);
+        ambientLightRef.current = ambient;
 
-        const keyLight = new THREE.DirectionalLight('#ffffff', 0.9);
-        keyLight.position.set(6, 10, 4);
+        const keyLight = new THREE.DirectionalLight(keyLightColor, keyLightIntensity);
+        keyLight.position.set(keyLightPosition.x, keyLightPosition.y, keyLightPosition.z);
         keyLight.castShadow = true;
         keyLight.shadow.mapSize.set(1024, 1024);
+        const keyLightTargetObject = new THREE.Object3D();
+        keyLightTargetObject.position.set(keyLightTarget.x, keyLightTarget.y, keyLightTarget.z);
+        keyLight.target = keyLightTargetObject;
+        scene.add(keyLightTargetObject);
         scene.add(keyLight);
+        keyLightRef.current = keyLight;
+        keyLightTargetRef.current = keyLightTargetObject;
 
-        const fillLight = new THREE.DirectionalLight('#7f8cff', 0.4);
+        const fillLight = new THREE.DirectionalLight(fillLightColor, fillLightIntensity);
         fillLight.position.set(-6, 6, -4);
         scene.add(fillLight);
+        fillLightRef.current = fillLight;
 
         const resize = () => {
             if (!container) return;
@@ -1145,7 +1208,8 @@ const PhysicsDice = ({
 
             if (resultEmittedRef.current && lastResultsRef.current.length > 0) {
                 const pulse = pulseActiveRef.current ? (Math.sin(performance.now() * 0.008) + 1) / 2 : 1;
-                const textColor = BASE_TEXT_COLOR.clone().lerp(HIGHLIGHT_TEXT_COLOR, pulse).getStyle();
+                const baseText = new THREE.Color(textColor);
+                const textColorValue = baseText.clone().lerp(new THREE.Color(highlightTextColor), pulse).getStyle();
 
                 diceRef.current.forEach((die, index) => {
                     const targetValue = lastResultsRef.current[index];
@@ -1158,11 +1222,11 @@ const PhysicsDice = ({
                         if (plateValue === targetValue) {
                             plate.material.color.copy(BASE_PLATE_COLOR);
                             plate.material.opacity = 1;
-                            if (faceTexture) updateFaceTextureColor(faceTexture, textColor);
+                            if (faceTexture) updateFaceTextureColor(faceTexture, textColorValue);
                         } else {
                             plate.material.color.copy(BASE_PLATE_COLOR);
                             plate.material.opacity = 1;
-                            if (faceTexture) updateFaceTextureColor(faceTexture, BASE_TEXT_COLOR.getStyle());
+                            if (faceTexture) updateFaceTextureColor(faceTexture, baseText.getStyle());
                         }
                     });
                 });
@@ -1251,9 +1315,62 @@ const PhysicsDice = ({
     }, [collisionSoundUrls, collisionSoundUrl]);
 
     useEffect(() => {
+        resetPlateHighlights();
+    }, [textColor]);
+
+    useEffect(() => {
+        diceRef.current.forEach((die) => {
+            const meshMaterials = die.mesh.material;
+            if (Array.isArray(meshMaterials)) {
+                meshMaterials.forEach((material) => {
+                    if (material instanceof THREE.MeshStandardMaterial) {
+                        material.color.set(diceColor);
+                        material.roughness = diceRoughness;
+                        material.metalness = diceMetalness;
+                        material.needsUpdate = true;
+                    }
+                });
+            }
+        });
+    }, [diceColor, diceRoughness, diceMetalness]);
+
+    useEffect(() => {
         if (!worldRef.current) return;
         rollDice();
     }, [rollKey]);
+
+    useEffect(() => {
+        const light = keyLightRef.current;
+        const target = keyLightTargetRef.current;
+        if (light) {
+            light.position.set(keyLightPosition.x, keyLightPosition.y, keyLightPosition.z);
+        }
+        if (target) {
+            target.position.set(keyLightTarget.x, keyLightTarget.y, keyLightTarget.z);
+        }
+    }, [keyLightPosition, keyLightTarget]);
+
+    useEffect(() => {
+        if (ambientLightRef.current) {
+            ambientLightRef.current.color.set(ambientLightColor);
+            ambientLightRef.current.intensity = ambientLightIntensity;
+        }
+        if (keyLightRef.current) {
+            keyLightRef.current.color.set(keyLightColor);
+            keyLightRef.current.intensity = keyLightIntensity;
+        }
+        if (fillLightRef.current) {
+            fillLightRef.current.color.set(fillLightColor);
+            fillLightRef.current.intensity = fillLightIntensity;
+        }
+    }, [
+        ambientLightColor,
+        ambientLightIntensity,
+        keyLightColor,
+        keyLightIntensity,
+        fillLightColor,
+        fillLightIntensity,
+    ]);
 
     return (
         <div className="physics-dice" ref={containerRef}>

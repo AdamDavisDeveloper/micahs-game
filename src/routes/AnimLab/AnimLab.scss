@@ -42,6 +42,84 @@
     gap: 12px;
 }
 
+.animlab-materials {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+    padding: 12px;
+    border-radius: 12px;
+    background: rgba(18, 20, 27, 0.6);
+    color: #e6e8ff;
+}
+
+.animlab-material-control {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.9rem;
+}
+
+.animlab-material-control input[type='color'] {
+    width: 44px;
+    height: 32px;
+    border: none;
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+}
+
+.animlab-material-control input[type='range'] {
+    width: 140px;
+}
+
+.animlab-material-value {
+    min-width: 48px;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
+
+.animlab-lighting {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    padding: 12px;
+    border-radius: 12px;
+    background: rgba(18, 20, 27, 0.6);
+    color: #e6e8ff;
+}
+
+.animlab-lighting--colors {
+    align-items: flex-start;
+}
+
+.animlab-lighting-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.animlab-lighting-title {
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.animlab-lighting-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.animlab-lighting-row button {
+    background: #2b2f3a;
+    color: #e6e8ff;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 6px 10px;
+    border-radius: 8px;
+    cursor: pointer;
+}
+
 .animlab-sound-select {
     display: flex;
     flex-direction: column;
