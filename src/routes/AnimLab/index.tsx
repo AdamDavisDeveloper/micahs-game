@@ -43,6 +43,7 @@ const AnimLab = () => {
   const [highlightTextColors, setHighlightTextColors] = useState<string[]>([]);
   const [textColors, setTextColors] = useState<string[]>([]);
   const [editingDieIndex, setEditingDieIndex] = useState<number | null>(null);
+  const [lightingModalOpen, setLightingModalOpen] = useState(false);
   const thumbnailRefs = useRef<Array<HTMLCanvasElement | null>>([]);
 
   const adjustValue = (
@@ -81,6 +82,9 @@ const AnimLab = () => {
   return (
     <div className="AnimLab">
       <div className="animlab-controls">
+        <button type="button" onClick={() => setLightingModalOpen(true)}>
+          Lighting Controls
+        </button>
         <button type="button" onClick={handleRoll}>
           Roll Dice
         </button>
@@ -337,133 +341,143 @@ const AnimLab = () => {
           </div>
         </div>
       )}
-      <div className="animlab-card">
-        <div className="animlab-card__title">Lighting</div>
-        <div className="animlab-lighting">
-          <div className="animlab-lighting-group">
-            <div className="animlab-lighting-title">Light Position</div>
-            <div className="animlab-lighting-row">
-              <button type="button" onClick={() => adjustValue(setLightNorthSouth, 0.5)}>
-                North +
+      {lightingModalOpen && (
+        <div className="animlab-modal">
+          <div className="animlab-modal__backdrop" onClick={() => setLightingModalOpen(false)} />
+          <div className="animlab-modal__content" role="dialog" aria-modal="true">
+            <div className="animlab-modal__header">
+              <span>Lighting Controls</span>
+              <button type="button" onClick={() => setLightingModalOpen(false)}>
+                ✕
               </button>
-              <button type="button" onClick={() => adjustValue(setLightNorthSouth, -0.5)}>
-                South -
-              </button>
-              <span>NS: {lightNorthSouth.toFixed(2)}</span>
             </div>
-            <div className="animlab-lighting-row">
-              <button type="button" onClick={() => adjustValue(setLightEastWest, 0.5)}>
-                East +
-              </button>
-              <button type="button" onClick={() => adjustValue(setLightEastWest, -0.5)}>
-                West -
-              </button>
-              <span>EW: {lightEastWest.toFixed(2)}</span>
+            <div className="animlab-modal__section animlab-lighting">
+              <div className="animlab-lighting-group">
+                <div className="animlab-lighting-title">Light Position</div>
+                <div className="animlab-lighting-row">
+                  <button type="button" onClick={() => adjustValue(setLightNorthSouth, 0.5)}>
+                    North +
+                  </button>
+                  <button type="button" onClick={() => adjustValue(setLightNorthSouth, -0.5)}>
+                    South -
+                  </button>
+                  <span>NS: {lightNorthSouth.toFixed(2)}</span>
+                </div>
+                <div className="animlab-lighting-row">
+                  <button type="button" onClick={() => adjustValue(setLightEastWest, 0.5)}>
+                    East +
+                  </button>
+                  <button type="button" onClick={() => adjustValue(setLightEastWest, -0.5)}>
+                    West -
+                  </button>
+                  <span>EW: {lightEastWest.toFixed(2)}</span>
+                </div>
+                <div className="animlab-lighting-row">
+                  <button type="button" onClick={() => adjustValue(setLightHeight, 0.5)}>
+                    Up +
+                  </button>
+                  <button type="button" onClick={() => adjustValue(setLightHeight, -0.5)}>
+                    Down -
+                  </button>
+                  <span>H: {lightHeight.toFixed(2)}</span>
+                </div>
+              </div>
+              <div className="animlab-lighting-group">
+                <div className="animlab-lighting-title">Light Aim</div>
+                <div className="animlab-lighting-row">
+                  <button type="button" onClick={() => adjustValue(setLightTargetLeftRight, 0.25)}>
+                    Right +
+                  </button>
+                  <button type="button" onClick={() => adjustValue(setLightTargetLeftRight, -0.25)}>
+                    Left -
+                  </button>
+                  <span>LR: {lightTargetLeftRight.toFixed(2)}</span>
+                </div>
+                <div className="animlab-lighting-row">
+                  <button type="button" onClick={() => adjustValue(setLightTargetUpDown, 0.25)}>
+                    Up +
+                  </button>
+                  <button type="button" onClick={() => adjustValue(setLightTargetUpDown, -0.25)}>
+                    Down -
+                  </button>
+                  <span>UD: {lightTargetUpDown.toFixed(2)}</span>
+                </div>
+              </div>
             </div>
-            <div className="animlab-lighting-row">
-              <button type="button" onClick={() => adjustValue(setLightHeight, 0.5)}>
-                Up +
-              </button>
-              <button type="button" onClick={() => adjustValue(setLightHeight, -0.5)}>
-                Down -
-              </button>
-              <span>H: {lightHeight.toFixed(2)}</span>
-            </div>
-          </div>
-          <div className="animlab-lighting-group">
-            <div className="animlab-lighting-title">Light Aim</div>
-            <div className="animlab-lighting-row">
-              <button type="button" onClick={() => adjustValue(setLightTargetLeftRight, 0.25)}>
-                Right +
-              </button>
-              <button type="button" onClick={() => adjustValue(setLightTargetLeftRight, -0.25)}>
-                Left -
-              </button>
-              <span>LR: {lightTargetLeftRight.toFixed(2)}</span>
-            </div>
-            <div className="animlab-lighting-row">
-              <button type="button" onClick={() => adjustValue(setLightTargetUpDown, 0.25)}>
-                Up +
-              </button>
-              <button type="button" onClick={() => adjustValue(setLightTargetUpDown, -0.25)}>
-                Down -
-              </button>
-              <span>UD: {lightTargetUpDown.toFixed(2)}</span>
+            <div className="animlab-modal__section animlab-lighting animlab-lighting--colors">
+              <div className="animlab-lighting-group">
+                <div className="animlab-lighting-title">Ambient</div>
+                <label className="animlab-material-control">
+                  <span>Color</span>
+                  <input
+                    type="color"
+                    value={ambientLightColor}
+                    onChange={(event) => setAmbientLightColor(event.target.value)}
+                  />
+                </label>
+                <label className="animlab-material-control">
+                  <span>Intensity</span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={2}
+                    step={0.01}
+                    value={ambientLightIntensity}
+                    onChange={(event) => setAmbientLightIntensity(Number(event.target.value))}
+                  />
+                  <span className="animlab-material-value">{ambientLightIntensity.toFixed(2)}</span>
+                </label>
+              </div>
+              <div className="animlab-lighting-group">
+                <div className="animlab-lighting-title">Key Light</div>
+                <label className="animlab-material-control">
+                  <span>Color</span>
+                  <input
+                    type="color"
+                    value={keyLightColor}
+                    onChange={(event) => setKeyLightColor(event.target.value)}
+                  />
+                </label>
+                <label className="animlab-material-control">
+                  <span>Intensity</span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={3}
+                    step={0.01}
+                    value={keyLightIntensity}
+                    onChange={(event) => setKeyLightIntensity(Number(event.target.value))}
+                  />
+                  <span className="animlab-material-value">{keyLightIntensity.toFixed(2)}</span>
+                </label>
+              </div>
+              <div className="animlab-lighting-group">
+                <div className="animlab-lighting-title">Fill Light</div>
+                <label className="animlab-material-control">
+                  <span>Color</span>
+                  <input
+                    type="color"
+                    value={fillLightColor}
+                    onChange={(event) => setFillLightColor(event.target.value)}
+                  />
+                </label>
+                <label className="animlab-material-control">
+                  <span>Intensity</span>
+                  <input
+                    type="range"
+                    min={0}
+                    max={2}
+                    step={0.01}
+                    value={fillLightIntensity}
+                    onChange={(event) => setFillLightIntensity(Number(event.target.value))}
+                  />
+                  <span className="animlab-material-value">{fillLightIntensity.toFixed(2)}</span>
+                </label>
+              </div>
             </div>
           </div>
         </div>
-        <div className="animlab-lighting animlab-lighting--colors">
-          <div className="animlab-lighting-group">
-            <div className="animlab-lighting-title">Ambient</div>
-            <label className="animlab-material-control">
-              <span>Color</span>
-              <input
-                type="color"
-                value={ambientLightColor}
-                onChange={(event) => setAmbientLightColor(event.target.value)}
-              />
-            </label>
-            <label className="animlab-material-control">
-              <span>Intensity</span>
-              <input
-                type="range"
-                min={0}
-                max={2}
-                step={0.01}
-                value={ambientLightIntensity}
-                onChange={(event) => setAmbientLightIntensity(Number(event.target.value))}
-              />
-              <span className="animlab-material-value">{ambientLightIntensity.toFixed(2)}</span>
-            </label>
-          </div>
-          <div className="animlab-lighting-group">
-            <div className="animlab-lighting-title">Key Light</div>
-            <label className="animlab-material-control">
-              <span>Color</span>
-              <input
-                type="color"
-                value={keyLightColor}
-                onChange={(event) => setKeyLightColor(event.target.value)}
-              />
-            </label>
-            <label className="animlab-material-control">
-              <span>Intensity</span>
-              <input
-                type="range"
-                min={0}
-                max={3}
-                step={0.01}
-                value={keyLightIntensity}
-                onChange={(event) => setKeyLightIntensity(Number(event.target.value))}
-              />
-              <span className="animlab-material-value">{keyLightIntensity.toFixed(2)}</span>
-            </label>
-          </div>
-          <div className="animlab-lighting-group">
-            <div className="animlab-lighting-title">Fill Light</div>
-            <label className="animlab-material-control">
-              <span>Color</span>
-              <input
-                type="color"
-                value={fillLightColor}
-                onChange={(event) => setFillLightColor(event.target.value)}
-              />
-            </label>
-            <label className="animlab-material-control">
-              <span>Intensity</span>
-              <input
-                type="range"
-                min={0}
-                max={2}
-                step={0.01}
-                value={fillLightIntensity}
-                onChange={(event) => setFillLightIntensity(Number(event.target.value))}
-              />
-              <span className="animlab-material-value">{fillLightIntensity.toFixed(2)}</span>
-            </label>
-          </div>
-        </div>
-      </div>
+      )}
       <PhysicsDice
         diceSides={diceSides}
         diceCount={diceCount}
