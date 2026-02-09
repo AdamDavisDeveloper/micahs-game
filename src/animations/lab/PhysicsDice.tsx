@@ -13,6 +13,9 @@ type PhysicsDiceProps = {
     diceColor?: string;
     diceRoughness?: number;
     diceMetalness?: number;
+    diceColors?: string[];
+    diceRoughnesses?: number[];
+    diceMetalnesses?: number[];
     keyLightPosition?: { x: number; y: number; z: number };
     keyLightTarget?: { x: number; y: number; z: number };
     ambientLightColor?: string;
@@ -23,6 +26,8 @@ type PhysicsDiceProps = {
     fillLightIntensity?: number;
     highlightTextColor?: string;
     textColor?: string;
+    highlightTextColors?: string[];
+    textColors?: string[];
     tableHalfSize?: number;
     tableWallHeight?: number;
     tableCeilingHeight?: number;
@@ -459,6 +464,9 @@ const PhysicsDice = ({
     diceColor = '#ffffff',
     diceRoughness = 0.005,
     diceMetalness = 0.1,
+    diceColors,
+    diceRoughnesses,
+    diceMetalnesses,
     keyLightPosition = { x: 6, y: 10, z: 4 },
     keyLightTarget = { x: 0, y: 0, z: 0 },
     ambientLightColor = '#ffffff',
@@ -469,6 +477,8 @@ const PhysicsDice = ({
     fillLightIntensity = 0.75,
     highlightTextColor = '#800080',
     textColor = '#000000',
+    highlightTextColors,
+    textColors,
     tableHalfSize = 5.5,
     tableWallHeight = 2.5,
     tableCeilingHeight = 6,
@@ -496,6 +506,8 @@ const PhysicsDice = ({
     const pulseActiveRef = useRef(false);
     const textColorRef = useRef(textColor);
     const highlightTextColorRef = useRef(highlightTextColor);
+    const textColorsRef = useRef<string[] | undefined>(textColors);
+    const highlightTextColorsRef = useRef<string[] | undefined>(highlightTextColors);
     const prevSidesRef = useRef<number[]>([]);
     const pointerStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
     const audioPoolRef = useRef<Record<string, HTMLAudioElement[]>>({});
@@ -582,8 +594,13 @@ const PhysicsDice = ({
         void audio.play();
     };
 
+    const getDieTextColor = (index: number) =>
+        textColorsRef.current?.[index] ?? textColorRef.current;
+    const getDieHighlightColor = (index: number) =>
+        highlightTextColorsRef.current?.[index] ?? highlightTextColorRef.current;
+
     const resetPlateHighlights = () => {
-        diceRef.current.forEach((die) => {
+        diceRef.current.forEach((die, dieIndex) => {
             die.facePlates?.forEach((plate) => {
                 if (plate.material instanceof THREE.MeshBasicMaterial) {
                     plate.material.color.copy(BASE_PLATE_COLOR);
@@ -591,7 +608,7 @@ const PhysicsDice = ({
                 }
                 const faceTexture = plate.userData.faceTexture as FaceTexture | undefined;
                 if (faceTexture) {
-                    updateFaceTextureColor(faceTexture, new THREE.Color(textColorRef.current).getStyle());
+                    updateFaceTextureColor(faceTexture, new THREE.Color(getDieTextColor(dieIndex)).getStyle());
                 }
             });
 
@@ -599,10 +616,13 @@ const PhysicsDice = ({
     };
 
     const createDie = (sides: number, index: number, diceMaterial: Material, dropFromAbove: boolean) => {
+        const resolvedColor = diceColors?.[index] ?? diceColor;
+        const resolvedRoughness = diceRoughnesses?.[index] ?? diceRoughness;
+        const resolvedMetalness = diceMetalnesses?.[index] ?? diceMetalness;
         const materialOptions: DiceMaterialOptions = {
-            color: diceColor,
-            roughness: diceRoughness,
-            metalness: diceMetalness,
+            color: resolvedColor,
+            roughness: resolvedRoughness,
+            metalness: resolvedMetalness,
         };
         const { geometry, shape, faces, materials, radius, faceOffsets, collisionScale } = createDiceDefinition(
             sides,
@@ -755,7 +775,7 @@ const PhysicsDice = ({
 
             plateTargets.forEach(({ position, desiredUp, desiredRight, value: plateValue }) => {
                 const faceTexture = createFaceTexture(plateValue ?? value, sides);
-                updateFaceTextureColor(faceTexture, new THREE.Color(textColor).getStyle());
+                updateFaceTextureColor(faceTexture, new THREE.Color(getDieTextColor(index)).getStyle());
                 const plateMaterial = new THREE.MeshBasicMaterial({
                     map: faceTexture.texture,
                     ...plateMaterialOptions,
@@ -1213,14 +1233,11 @@ const PhysicsDice = ({
 
             if (resultEmittedRef.current && lastResultsRef.current.length > 0) {
                 const pulse = pulseActiveRef.current ? (Math.sin(performance.now() * 0.008) + 1) / 2 : 1;
-                const baseText = new THREE.Color(textColorRef.current);
-                const textColorValue = baseText
-                    .clone()
-                    .lerp(new THREE.Color(highlightTextColorRef.current), pulse)
-                    .getStyle();
-
                 diceRef.current.forEach((die, index) => {
                     const targetValue = lastResultsRef.current[index];
+                    const baseText = new THREE.Color(getDieTextColor(index));
+                    const highlightColor = new THREE.Color(getDieHighlightColor(index));
+                    const textColorValue = baseText.clone().lerp(highlightColor, pulse).getStyle();
 
                     die.facePlates?.forEach((plate) => {
                         if (!(plate.material instanceof THREE.MeshBasicMaterial)) return;
@@ -1355,31 +1372,39 @@ const PhysicsDice = ({
 
     useEffect(() => {
         resetPlateHighlights();
-    }, [textColor]);
+    }, [textColor, textColors]);
 
     useEffect(() => {
         textColorRef.current = textColor;
     }, [textColor]);
 
     useEffect(() => {
+        textColorsRef.current = textColors;
+    }, [textColors]);
+
+    useEffect(() => {
         highlightTextColorRef.current = highlightTextColor;
     }, [highlightTextColor]);
 
     useEffect(() => {
-        diceRef.current.forEach((die) => {
+        highlightTextColorsRef.current = highlightTextColors;
+    }, [highlightTextColors]);
+
+    useEffect(() => {
+        diceRef.current.forEach((die, index) => {
             const meshMaterials = die.mesh.material;
             if (Array.isArray(meshMaterials)) {
                 meshMaterials.forEach((material) => {
                     if (material instanceof THREE.MeshStandardMaterial) {
-                        material.color.set(diceColor);
-                        material.roughness = diceRoughness;
-                        material.metalness = diceMetalness;
+                        material.color.set(diceColors?.[index] ?? diceColor);
+                        material.roughness = diceRoughnesses?.[index] ?? diceRoughness;
+                        material.metalness = diceMetalnesses?.[index] ?? diceMetalness;
                         material.needsUpdate = true;
                     }
                 });
             }
         });
-    }, [diceColor, diceRoughness, diceMetalness]);
+    }, [diceColor, diceRoughness, diceMetalness, diceColors, diceRoughnesses, diceMetalnesses]);
 
     useEffect(() => {
         if (!worldRef.current) return;

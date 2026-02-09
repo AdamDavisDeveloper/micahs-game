@@ -21,6 +21,9 @@ const AnimLab = () => {
   const [diceColor, setDiceColor] = useState('#ffffff');
   const [diceRoughness, setDiceRoughness] = useState(0.005);
   const [diceMetalness, setDiceMetalness] = useState(0.1);
+  const [diceColors, setDiceColors] = useState<string[]>([]);
+  const [diceRoughnesses, setDiceRoughnesses] = useState<number[]>([]);
+  const [diceMetalnesses, setDiceMetalnesses] = useState<number[]>([]);
   const [lightHeight, setLightHeight] = useState(10);
   const [lightEastWest, setLightEastWest] = useState(6);
   const [lightNorthSouth, setLightNorthSouth] = useState(4);
@@ -34,6 +37,9 @@ const AnimLab = () => {
   const [fillLightIntensity, setFillLightIntensity] = useState(0.75);
   const [highlightTextColor, setHighlightTextColor] = useState('#800080');
   const [textColor, setTextColor] = useState('#000000');
+  const [highlightTextColors, setHighlightTextColors] = useState<string[]>([]);
+  const [textColors, setTextColors] = useState<string[]>([]);
+  const [editingDieIndex, setEditingDieIndex] = useState<number | null>(null);
 
   const adjustValue = (
     setter: React.Dispatch<React.SetStateAction<number>>,
@@ -70,6 +76,11 @@ const AnimLab = () => {
           onClick={() => {
             setDiceSides((prev) => [...prev, 4]);
             setPerDieSounds((prev) => [...prev, prev[prev.length - 1] ?? diceHitOneUrl]);
+            setDiceColors((prev) => [...prev, diceColor]);
+            setDiceRoughnesses((prev) => [...prev, diceRoughness]);
+            setDiceMetalnesses((prev) => [...prev, diceMetalness]);
+            setHighlightTextColors((prev) => [...prev, highlightTextColor]);
+            setTextColors((prev) => [...prev, textColor]);
             setDiceCount((prev) => prev + 1);
           }}
         >
@@ -80,6 +91,11 @@ const AnimLab = () => {
           onClick={() => {
             setDiceSides((prev) => [...prev, 6]);
             setPerDieSounds((prev) => [...prev, prev[prev.length - 1] ?? diceHitOneUrl]);
+            setDiceColors((prev) => [...prev, diceColor]);
+            setDiceRoughnesses((prev) => [...prev, diceRoughness]);
+            setDiceMetalnesses((prev) => [...prev, diceMetalness]);
+            setHighlightTextColors((prev) => [...prev, highlightTextColor]);
+            setTextColors((prev) => [...prev, textColor]);
             setDiceCount((prev) => prev + 1);
           }}
         >
@@ -90,6 +106,11 @@ const AnimLab = () => {
           onClick={() => {
             setDiceSides((prev) => [...prev, 8]);
             setPerDieSounds((prev) => [...prev, prev[prev.length - 1] ?? diceHitOneUrl]);
+            setDiceColors((prev) => [...prev, diceColor]);
+            setDiceRoughnesses((prev) => [...prev, diceRoughness]);
+            setDiceMetalnesses((prev) => [...prev, diceMetalness]);
+            setHighlightTextColors((prev) => [...prev, highlightTextColor]);
+            setTextColors((prev) => [...prev, textColor]);
             setDiceCount((prev) => prev + 1);
           }}
         >
@@ -100,6 +121,11 @@ const AnimLab = () => {
           onClick={() => {
             setDiceSides((prev) => [...prev, 10]);
             setPerDieSounds((prev) => [...prev, prev[prev.length - 1] ?? diceHitOneUrl]);
+            setDiceColors((prev) => [...prev, diceColor]);
+            setDiceRoughnesses((prev) => [...prev, diceRoughness]);
+            setDiceMetalnesses((prev) => [...prev, diceMetalness]);
+            setHighlightTextColors((prev) => [...prev, highlightTextColor]);
+            setTextColors((prev) => [...prev, textColor]);
             setDiceCount((prev) => prev + 1);
           }}
         >
@@ -110,6 +136,11 @@ const AnimLab = () => {
           onClick={() => {
             setDiceSides((prev) => [...prev, 12]);
             setPerDieSounds((prev) => [...prev, prev[prev.length - 1] ?? diceHitOneUrl]);
+            setDiceColors((prev) => [...prev, diceColor]);
+            setDiceRoughnesses((prev) => [...prev, diceRoughness]);
+            setDiceMetalnesses((prev) => [...prev, diceMetalness]);
+            setHighlightTextColors((prev) => [...prev, highlightTextColor]);
+            setTextColors((prev) => [...prev, textColor]);
             setDiceCount((prev) => prev + 1);
           }}
         >
@@ -120,6 +151,11 @@ const AnimLab = () => {
           onClick={() => {
             setDiceSides((prev) => [...prev, 20]);
             setPerDieSounds((prev) => [...prev, prev[prev.length - 1] ?? diceHitOneUrl]);
+            setDiceColors((prev) => [...prev, diceColor]);
+            setDiceRoughnesses((prev) => [...prev, diceRoughness]);
+            setDiceMetalnesses((prev) => [...prev, diceMetalness]);
+            setHighlightTextColors((prev) => [...prev, highlightTextColor]);
+            setTextColors((prev) => [...prev, textColor]);
             setDiceCount((prev) => prev + 1);
           }}
         >
@@ -127,217 +163,276 @@ const AnimLab = () => {
         </button>
       </div>
       <div className="animlab-sounds">
-        {perDieSounds.map((sound, index) => (
+        {perDieSounds.map((_, index) => (
           <div key={`die-sound-${index}`} className="animlab-sound-select">
             <div className="animlab-sound-header">
               <span>
                 Die {index + 1} (D{diceSides[index] ?? 6})
               </span>
-              <button
-                type="button"
-                className="animlab-remove"
-                onClick={() => {
-                  setPerDieSounds((prev) => prev.filter((_, i) => i !== index));
-                  setDiceSides((prev) => prev.filter((_, i) => i !== index));
-                  setDiceCount((prev) => Math.max(prev - 1, 0));
-                }}
-                aria-label={`Remove die ${index + 1}`}
-              >
-                ✕
-              </button>
+              <div className="animlab-sound-actions">
+                <button
+                  type="button"
+                  className="animlab-edit"
+                  onClick={() => setEditingDieIndex(index)}
+                  aria-label={`Edit die ${index + 1}`}
+                >
+                  ✎
+                </button>
+                <button
+                  type="button"
+                  className="animlab-remove"
+                  onClick={() => {
+                    setPerDieSounds((prev) => prev.filter((_, i) => i !== index));
+                    setDiceSides((prev) => prev.filter((_, i) => i !== index));
+                    setDiceColors((prev) => prev.filter((_, i) => i !== index));
+                    setDiceRoughnesses((prev) => prev.filter((_, i) => i !== index));
+                    setDiceMetalnesses((prev) => prev.filter((_, i) => i !== index));
+                    setHighlightTextColors((prev) => prev.filter((_, i) => i !== index));
+                    setTextColors((prev) => prev.filter((_, i) => i !== index));
+                    setDiceCount((prev) => Math.max(prev - 1, 0));
+                    setEditingDieIndex((prev) => (prev === index ? null : prev));
+                  }}
+                  aria-label={`Remove die ${index + 1}`}
+                >
+                  ✕
+                </button>
+              </div>
             </div>
-            <select
-              value={sound}
-              onChange={(event) => {
-                const next = [...perDieSounds];
-                next[index] = event.target.value;
-                setPerDieSounds(next);
-              }}
-            >
-              {soundOptions.map((option) => (
-                <option key={option.url} value={option.url}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
           </div>
         ))}
       </div>
-      <div className="animlab-materials">
-        <label className="animlab-material-control">
-          <span>Dice Color</span>
-          <input
-            type="color"
-            value={diceColor}
-            onChange={(event) => setDiceColor(event.target.value)}
-          />
-        </label>
-        <label className="animlab-material-control">
-          <span>Roughness</span>
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.005}
-            value={diceRoughness}
-            onChange={(event) => setDiceRoughness(Number(event.target.value))}
-          />
-          <span className="animlab-material-value">{diceRoughness.toFixed(3)}</span>
-        </label>
-        <label className="animlab-material-control">
-          <span>Metalness</span>
-          <input
-            type="range"
-            min={0}
-            max={1}
-            step={0.005}
-            value={diceMetalness}
-            onChange={(event) => setDiceMetalness(Number(event.target.value))}
-          />
-          <span className="animlab-material-value">{diceMetalness.toFixed(3)}</span>
-        </label>
-      </div>
-      <div className="animlab-lighting">
-        <div className="animlab-lighting-group">
-          <div className="animlab-lighting-title">Light Position</div>
-          <div className="animlab-lighting-row">
-            <button type="button" onClick={() => adjustValue(setLightNorthSouth, 0.5)}>
-              North +
-            </button>
-            <button type="button" onClick={() => adjustValue(setLightNorthSouth, -0.5)}>
-              South -
-            </button>
-            <span>NS: {lightNorthSouth.toFixed(2)}</span>
-          </div>
-          <div className="animlab-lighting-row">
-            <button type="button" onClick={() => adjustValue(setLightEastWest, 0.5)}>
-              East +
-            </button>
-            <button type="button" onClick={() => adjustValue(setLightEastWest, -0.5)}>
-              West -
-            </button>
-            <span>EW: {lightEastWest.toFixed(2)}</span>
-          </div>
-          <div className="animlab-lighting-row">
-            <button type="button" onClick={() => adjustValue(setLightHeight, 0.5)}>
-              Up +
-            </button>
-            <button type="button" onClick={() => adjustValue(setLightHeight, -0.5)}>
-              Down -
-            </button>
-            <span>H: {lightHeight.toFixed(2)}</span>
+      {editingDieIndex !== null && (
+        <div className="animlab-modal">
+          <div className="animlab-modal__backdrop" onClick={() => setEditingDieIndex(null)} />
+          <div className="animlab-modal__content" role="dialog" aria-modal="true">
+            <div className="animlab-modal__header">
+              <span>Die {editingDieIndex + 1} Settings</span>
+              <button type="button" onClick={() => setEditingDieIndex(null)}>
+                ✕
+              </button>
+            </div>
+            <div className="animlab-modal__section">
+              <label className="animlab-material-control">
+                <span>Hit Sound</span>
+                <select
+                  value={perDieSounds[editingDieIndex] ?? diceHitOneUrl}
+                  onChange={(event) => {
+                    const next = [...perDieSounds];
+                    next[editingDieIndex] = event.target.value;
+                    setPerDieSounds(next);
+                  }}
+                >
+                  {soundOptions.map((option) => (
+                    <option key={option.url} value={option.url}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+            <div className="animlab-modal__section">
+              <label className="animlab-material-control">
+                <span>Dice Color</span>
+                <input
+                  type="color"
+                  value={diceColors[editingDieIndex] ?? diceColor}
+                  onChange={(event) => {
+                    const next = [...diceColors];
+                    next[editingDieIndex] = event.target.value;
+                    setDiceColors(next);
+                  }}
+                />
+              </label>
+              <label className="animlab-material-control">
+                <span>Roughness</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.005}
+                  value={diceRoughnesses[editingDieIndex] ?? diceRoughness}
+                  onChange={(event) => {
+                    const next = [...diceRoughnesses];
+                    next[editingDieIndex] = Number(event.target.value);
+                    setDiceRoughnesses(next);
+                  }}
+                />
+                <span className="animlab-material-value">
+                  {(diceRoughnesses[editingDieIndex] ?? diceRoughness).toFixed(3)}
+                </span>
+              </label>
+              <label className="animlab-material-control">
+                <span>Metalness</span>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.005}
+                  value={diceMetalnesses[editingDieIndex] ?? diceMetalness}
+                  onChange={(event) => {
+                    const next = [...diceMetalnesses];
+                    next[editingDieIndex] = Number(event.target.value);
+                    setDiceMetalnesses(next);
+                  }}
+                />
+                <span className="animlab-material-value">
+                  {(diceMetalnesses[editingDieIndex] ?? diceMetalness).toFixed(3)}
+                </span>
+              </label>
+              <label className="animlab-material-control">
+                <span>Win Value Color</span>
+                <input
+                  type="color"
+                  value={highlightTextColors[editingDieIndex] ?? highlightTextColor}
+                  onChange={(event) => {
+                    const next = [...highlightTextColors];
+                    next[editingDieIndex] = event.target.value;
+                    setHighlightTextColors(next);
+                  }}
+                />
+              </label>
+              <label className="animlab-material-control">
+                <span>Text Color</span>
+                <input
+                  type="color"
+                  value={textColors[editingDieIndex] ?? textColor}
+                  onChange={(event) => {
+                    const next = [...textColors];
+                    next[editingDieIndex] = event.target.value;
+                    setTextColors(next);
+                  }}
+                />
+              </label>
+            </div>
           </div>
         </div>
-        <div className="animlab-lighting-group">
-          <div className="animlab-lighting-title">Light Aim</div>
-          <div className="animlab-lighting-row">
-            <button type="button" onClick={() => adjustValue(setLightTargetLeftRight, 0.25)}>
-              Right +
-            </button>
-            <button type="button" onClick={() => adjustValue(setLightTargetLeftRight, -0.25)}>
-              Left -
-            </button>
-            <span>LR: {lightTargetLeftRight.toFixed(2)}</span>
+      )}
+      <div className="animlab-card">
+        <div className="animlab-card__title">Lighting</div>
+        <div className="animlab-lighting">
+          <div className="animlab-lighting-group">
+            <div className="animlab-lighting-title">Light Position</div>
+            <div className="animlab-lighting-row">
+              <button type="button" onClick={() => adjustValue(setLightNorthSouth, 0.5)}>
+                North +
+              </button>
+              <button type="button" onClick={() => adjustValue(setLightNorthSouth, -0.5)}>
+                South -
+              </button>
+              <span>NS: {lightNorthSouth.toFixed(2)}</span>
+            </div>
+            <div className="animlab-lighting-row">
+              <button type="button" onClick={() => adjustValue(setLightEastWest, 0.5)}>
+                East +
+              </button>
+              <button type="button" onClick={() => adjustValue(setLightEastWest, -0.5)}>
+                West -
+              </button>
+              <span>EW: {lightEastWest.toFixed(2)}</span>
+            </div>
+            <div className="animlab-lighting-row">
+              <button type="button" onClick={() => adjustValue(setLightHeight, 0.5)}>
+                Up +
+              </button>
+              <button type="button" onClick={() => adjustValue(setLightHeight, -0.5)}>
+                Down -
+              </button>
+              <span>H: {lightHeight.toFixed(2)}</span>
+            </div>
           </div>
-          <div className="animlab-lighting-row">
-            <button type="button" onClick={() => adjustValue(setLightTargetUpDown, 0.25)}>
-              Up +
-            </button>
-            <button type="button" onClick={() => adjustValue(setLightTargetUpDown, -0.25)}>
-              Down -
-            </button>
-            <span>UD: {lightTargetUpDown.toFixed(2)}</span>
+          <div className="animlab-lighting-group">
+            <div className="animlab-lighting-title">Light Aim</div>
+            <div className="animlab-lighting-row">
+              <button type="button" onClick={() => adjustValue(setLightTargetLeftRight, 0.25)}>
+                Right +
+              </button>
+              <button type="button" onClick={() => adjustValue(setLightTargetLeftRight, -0.25)}>
+                Left -
+              </button>
+              <span>LR: {lightTargetLeftRight.toFixed(2)}</span>
+            </div>
+            <div className="animlab-lighting-row">
+              <button type="button" onClick={() => adjustValue(setLightTargetUpDown, 0.25)}>
+                Up +
+              </button>
+              <button type="button" onClick={() => adjustValue(setLightTargetUpDown, -0.25)}>
+                Down -
+              </button>
+              <span>UD: {lightTargetUpDown.toFixed(2)}</span>
+            </div>
           </div>
         </div>
-      </div>
-      <div className="animlab-lighting animlab-lighting--colors">
-        <div className="animlab-lighting-group">
-          <div className="animlab-lighting-title">Ambient</div>
-          <label className="animlab-material-control">
-            <span>Color</span>
-            <input
-              type="color"
-              value={ambientLightColor}
-              onChange={(event) => setAmbientLightColor(event.target.value)}
-            />
-          </label>
-          <label className="animlab-material-control">
-            <span>Intensity</span>
-            <input
-              type="range"
-              min={0}
-              max={2}
-              step={0.01}
-              value={ambientLightIntensity}
-              onChange={(event) => setAmbientLightIntensity(Number(event.target.value))}
-            />
-            <span className="animlab-material-value">{ambientLightIntensity.toFixed(2)}</span>
-          </label>
+        <div className="animlab-lighting animlab-lighting--colors">
+          <div className="animlab-lighting-group">
+            <div className="animlab-lighting-title">Ambient</div>
+            <label className="animlab-material-control">
+              <span>Color</span>
+              <input
+                type="color"
+                value={ambientLightColor}
+                onChange={(event) => setAmbientLightColor(event.target.value)}
+              />
+            </label>
+            <label className="animlab-material-control">
+              <span>Intensity</span>
+              <input
+                type="range"
+                min={0}
+                max={2}
+                step={0.01}
+                value={ambientLightIntensity}
+                onChange={(event) => setAmbientLightIntensity(Number(event.target.value))}
+              />
+              <span className="animlab-material-value">{ambientLightIntensity.toFixed(2)}</span>
+            </label>
+          </div>
+          <div className="animlab-lighting-group">
+            <div className="animlab-lighting-title">Key Light</div>
+            <label className="animlab-material-control">
+              <span>Color</span>
+              <input
+                type="color"
+                value={keyLightColor}
+                onChange={(event) => setKeyLightColor(event.target.value)}
+              />
+            </label>
+            <label className="animlab-material-control">
+              <span>Intensity</span>
+              <input
+                type="range"
+                min={0}
+                max={3}
+                step={0.01}
+                value={keyLightIntensity}
+                onChange={(event) => setKeyLightIntensity(Number(event.target.value))}
+              />
+              <span className="animlab-material-value">{keyLightIntensity.toFixed(2)}</span>
+            </label>
+          </div>
+          <div className="animlab-lighting-group">
+            <div className="animlab-lighting-title">Fill Light</div>
+            <label className="animlab-material-control">
+              <span>Color</span>
+              <input
+                type="color"
+                value={fillLightColor}
+                onChange={(event) => setFillLightColor(event.target.value)}
+              />
+            </label>
+            <label className="animlab-material-control">
+              <span>Intensity</span>
+              <input
+                type="range"
+                min={0}
+                max={2}
+                step={0.01}
+                value={fillLightIntensity}
+                onChange={(event) => setFillLightIntensity(Number(event.target.value))}
+              />
+              <span className="animlab-material-value">{fillLightIntensity.toFixed(2)}</span>
+            </label>
+          </div>
         </div>
-        <div className="animlab-lighting-group">
-          <div className="animlab-lighting-title">Key Light</div>
-          <label className="animlab-material-control">
-            <span>Color</span>
-            <input
-              type="color"
-              value={keyLightColor}
-              onChange={(event) => setKeyLightColor(event.target.value)}
-            />
-          </label>
-          <label className="animlab-material-control">
-            <span>Intensity</span>
-            <input
-              type="range"
-              min={0}
-              max={3}
-              step={0.01}
-              value={keyLightIntensity}
-              onChange={(event) => setKeyLightIntensity(Number(event.target.value))}
-            />
-            <span className="animlab-material-value">{keyLightIntensity.toFixed(2)}</span>
-          </label>
-        </div>
-        <div className="animlab-lighting-group">
-          <div className="animlab-lighting-title">Fill Light</div>
-          <label className="animlab-material-control">
-            <span>Color</span>
-            <input
-              type="color"
-              value={fillLightColor}
-              onChange={(event) => setFillLightColor(event.target.value)}
-            />
-          </label>
-          <label className="animlab-material-control">
-            <span>Intensity</span>
-            <input
-              type="range"
-              min={0}
-              max={2}
-              step={0.01}
-              value={fillLightIntensity}
-              onChange={(event) => setFillLightIntensity(Number(event.target.value))}
-            />
-            <span className="animlab-material-value">{fillLightIntensity.toFixed(2)}</span>
-          </label>
-        </div>
-      </div>
-      <div className="animlab-materials">
-        <label className="animlab-material-control">
-          <span>Win Value Color</span>
-          <input
-            type="color"
-            value={highlightTextColor}
-            onChange={(event) => setHighlightTextColor(event.target.value)}
-          />
-        </label>
-        <label className="animlab-material-control">
-          <span>Text Color</span>
-          <input
-            type="color"
-            value={textColor}
-            onChange={(event) => setTextColor(event.target.value)}
-          />
-        </label>
       </div>
       <PhysicsDice
         diceSides={diceSides}
@@ -347,6 +442,9 @@ const AnimLab = () => {
         diceColor={diceColor}
         diceRoughness={diceRoughness}
         diceMetalness={diceMetalness}
+        diceColors={diceColors}
+        diceRoughnesses={diceRoughnesses}
+        diceMetalnesses={diceMetalnesses}
         keyLightPosition={{ x: lightEastWest, y: lightHeight, z: lightNorthSouth }}
         keyLightTarget={{ x: lightTargetLeftRight, y: lightTargetUpDown, z: 0 }}
         ambientLightColor={ambientLightColor}
@@ -357,6 +455,8 @@ const AnimLab = () => {
         fillLightIntensity={fillLightIntensity}
         highlightTextColor={highlightTextColor}
         textColor={textColor}
+        highlightTextColors={highlightTextColors}
+        textColors={textColors}
         tableHalfSize={5}
         tableWallHeight={2.4}
         tableCeilingHeight={6}
