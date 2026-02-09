@@ -133,6 +133,10 @@
   flex-direction: column;
   gap: 6px;
   color: #000000;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.85);
+  background: #ffffff;
 }
 
 .animlab-sound-header {
@@ -140,6 +144,39 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+}
+
+.animlab-die-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.animlab-die-result {
+  background: #000000;
+  color: #ffffff;
+  padding: 4px 10px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  width: fit-content;
+  margin-left: 72px;
+}
+
+.animlab-die-thumb {
+  width: 128px;
+  height: 128px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.animlab-die-canvas {
+  width: 128px;
+  height: 128px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .animlab-sound-actions {

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import PhysicsDice from '../../animations/lab/PhysicsDice';
 import diceHitOneUrl from '../../animations/assets/sounds/dice-hit-1.ogg';
 import diceHitTwoUrl from '../../animations/assets/sounds/dice-hit-2.mp3';
@@ -12,10 +12,13 @@ type SoundOption = {
   url: string;
 };
 
+// Thumbnails now rendered live from the 3D scene.
+
 const AnimLab = () => {
   const [diceCount, setDiceCount] = useState(0);
   const [rollKey, setRollKey] = useState(0);
   const [results, setResults] = useState<number[]>([]);
+  const [rollingResults, setRollingResults] = useState<number[]>([]);
   const [perDieSounds, setPerDieSounds] = useState<string[]>([]);
   const [diceSides, setDiceSides] = useState<number[]>([]);
   const [diceColor, setDiceColor] = useState('#ffffff');
@@ -40,6 +43,7 @@ const AnimLab = () => {
   const [highlightTextColors, setHighlightTextColors] = useState<string[]>([]);
   const [textColors, setTextColors] = useState<string[]>([]);
   const [editingDieIndex, setEditingDieIndex] = useState<number | null>(null);
+  const thumbnailRefs = useRef<Array<HTMLCanvasElement | null>>([]);
 
   const adjustValue = (
     setter: React.Dispatch<React.SetStateAction<number>>,
@@ -63,7 +67,16 @@ const AnimLab = () => {
     });
   }, [diceCount]);
 
-  const handleRoll = () => setRollKey((prev) => prev + 1);
+  const handleRoll = () => {
+    setResults([]);
+    setRollingResults([]);
+    setRollKey((prev) => prev + 1);
+  };
+  useEffect(() => {
+    if (results.length > 0) {
+      setRollingResults([]);
+    }
+  }, [results]);
 
   return (
     <div className="AnimLab">
@@ -166,8 +179,20 @@ const AnimLab = () => {
         {perDieSounds.map((_, index) => (
           <div key={`die-sound-${index}`} className="animlab-sound-select">
             <div className="animlab-sound-header">
-              <span>
-                Die {index + 1} (D{diceSides[index] ?? 6})
+              <span className="animlab-die-label">
+                <span className="animlab-die-thumb" aria-hidden="true">
+                  <canvas
+                    className="animlab-die-canvas"
+                    width={192}
+                    height={192}
+                    ref={(el) => {
+                      thumbnailRefs.current[index] = el;
+                    }}
+                  />
+                </span>
+                <span>
+                  Die {index + 1} (D{diceSides[index] ?? 6})
+                </span>
               </span>
               <div className="animlab-sound-actions">
                 <button
@@ -198,6 +223,11 @@ const AnimLab = () => {
                 </button>
               </div>
             </div>
+            {typeof results[index] !== 'undefined' ? (
+              <div className="animlab-die-result">Result: {results[index]}</div>
+            ) : typeof rollingResults[index] !== 'undefined' ? (
+              <div className="animlab-die-result">Result: {rollingResults[index]}</div>
+            ) : null}
           </div>
         ))}
       </div>
@@ -457,12 +487,14 @@ const AnimLab = () => {
         textColor={textColor}
         highlightTextColors={highlightTextColors}
         textColors={textColors}
+        thumbnailCanvases={thumbnailRefs.current}
         tableHalfSize={5}
         tableWallHeight={2.4}
         tableCeilingHeight={6}
         results={results}
         autoRollOnSetup={false}
         onResults={setResults}
+        onRollingResults={setRollingResults}
       />
       {results.length > 0 && (
         <div className="animlab-results">

@@ -28,6 +28,8 @@ type PhysicsDiceProps = {
     textColor?: string;
     highlightTextColors?: string[];
     textColors?: string[];
+    thumbnailCanvases?: Array<HTMLCanvasElement | null>;
+    rollingResults?: number[];
     tableHalfSize?: number;
     tableWallHeight?: number;
     tableCeilingHeight?: number;
@@ -35,6 +37,7 @@ type PhysicsDiceProps = {
     results?: number[];
     autoRollOnSetup?: boolean;
     onResults?: (results: number[]) => void;
+    onRollingResults?: (results: number[]) => void;
 };
 
 type DiceInstance = {
@@ -48,6 +51,16 @@ type DiceInstance = {
     radius: number;
     sides: number;
     d4VertexValues?: number[];
+    thumbnail?: {
+        canvas: HTMLCanvasElement;
+        renderer: THREE.WebGLRenderer;
+        scene: THREE.Scene;
+        camera: THREE.PerspectiveCamera;
+        mesh: THREE.Mesh;
+        light: THREE.DirectionalLight;
+        ambient: THREE.AmbientLight;
+    };
+    rollingResult?: number;
 };
 
 type DiceDefinition = {
@@ -479,6 +492,7 @@ const PhysicsDice = ({
     textColor = '#000000',
     highlightTextColors,
     textColors,
+    thumbnailCanvases,
     tableHalfSize = 5.5,
     tableWallHeight = 2.5,
     tableCeilingHeight = 6,
@@ -486,6 +500,7 @@ const PhysicsDice = ({
     results,
     autoRollOnSetup = true,
     onResults,
+    onRollingResults,
 }: PhysicsDiceProps) => {
     const containerRef = useRef<HTMLDivElement | null>(null);
     const worldRef = useRef<World | null>(null);
@@ -508,6 +523,8 @@ const PhysicsDice = ({
     const highlightTextColorRef = useRef(highlightTextColor);
     const textColorsRef = useRef<string[] | undefined>(textColors);
     const highlightTextColorsRef = useRef<string[] | undefined>(highlightTextColors);
+    const thumbnailCanvasesRef = useRef<Array<HTMLCanvasElement | null> | undefined>(thumbnailCanvases);
+    const lastRollingUpdateRef = useRef(0);
     const prevSidesRef = useRef<number[]>([]);
     const pointerStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
     const audioPoolRef = useRef<Record<string, HTMLAudioElement[]>>({});
@@ -534,7 +551,7 @@ const PhysicsDice = ({
 
     const clearDice = () => {
         if (!sceneRef.current || !worldRef.current) return;
-        diceRef.current.forEach(({ mesh, body, collideHandler, facePlates }) => {
+        diceRef.current.forEach(({ mesh, body, collideHandler, facePlates, thumbnail }) => {
             sceneRef.current?.remove(mesh);
             facePlates?.forEach((plate) => {
                 if (plate.material instanceof THREE.MeshBasicMaterial) {
@@ -544,6 +561,9 @@ const PhysicsDice = ({
             });
             if (collideHandler) body.removeEventListener('collide', collideHandler);
             worldRef.current?.removeBody(body);
+            if (thumbnail) {
+                thumbnail.renderer.dispose();
+            }
             mesh.geometry.dispose();
             if (Array.isArray(mesh.material)) {
                 mesh.material.forEach((mat: THREE.Material) => mat.dispose());
@@ -558,7 +578,7 @@ const PhysicsDice = ({
         if (!sceneRef.current || !worldRef.current) return;
         const die = diceRef.current[index];
         if (!die) return;
-        const { mesh, body, collideHandler, facePlates } = die;
+        const { mesh, body, collideHandler, facePlates, thumbnail } = die;
         sceneRef.current?.remove(mesh);
         facePlates?.forEach((plate) => {
             if (plate.material instanceof THREE.MeshBasicMaterial) {
@@ -568,6 +588,9 @@ const PhysicsDice = ({
         });
         if (collideHandler) body.removeEventListener('collide', collideHandler);
         worldRef.current?.removeBody(body);
+        if (thumbnail) {
+            thumbnail.renderer.dispose();
+        }
         mesh.geometry.dispose();
         if (Array.isArray(mesh.material)) {
             mesh.material.forEach((mat: THREE.Material) => mat.dispose());
@@ -598,6 +621,45 @@ const PhysicsDice = ({
         textColorsRef.current?.[index] ?? textColorRef.current;
     const getDieHighlightColor = (index: number) =>
         highlightTextColorsRef.current?.[index] ?? highlightTextColorRef.current;
+
+    const setupThumbnail = (die: DiceInstance, canvas: HTMLCanvasElement | null) => {
+        if (!canvas) {
+            if (die.thumbnail) {
+                die.thumbnail.renderer.dispose();
+                die.thumbnail = undefined;
+            }
+            return;
+        }
+
+        if (die.thumbnail?.canvas === canvas) return;
+
+        if (die.thumbnail) {
+            die.thumbnail.renderer.dispose();
+        }
+
+        const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setClearColor(0x000000, 0);
+
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(40, 1, 0.1, 50);
+        const ambient = new THREE.AmbientLight('#ffffff', 0.6);
+        const light = new THREE.DirectionalLight('#ffffff', 0.9);
+        light.position.set(2.5, 4, 3);
+        scene.add(ambient, light);
+
+        const mesh = die.mesh.clone();
+        mesh.position.set(0, 0, 0);
+        mesh.quaternion.copy(die.mesh.quaternion);
+        mesh.scale.copy(die.mesh.scale);
+        scene.add(mesh);
+
+        const distance = Math.max(die.radius * 2.4, 2.2);
+        camera.position.set(distance, distance * 0.9, distance);
+        camera.lookAt(0, 0, 0);
+
+        die.thumbnail = { canvas, renderer, scene, camera, mesh, light, ambient };
+    };
 
     const resetPlateHighlights = () => {
         diceRef.current.forEach((die, dieIndex) => {
@@ -838,6 +900,8 @@ const PhysicsDice = ({
         die.collideHandler = collideHandler;
 
         diceRef.current.push(die);
+
+        setupThumbnail(die, thumbnailCanvasesRef.current?.[index] ?? null);
     };
 
     const createDiceSet = (sidesList: number[], diceMaterial: Material) => {
@@ -854,6 +918,11 @@ const PhysicsDice = ({
         lastResultsRef.current = [];
         pulseActiveRef.current = false;
         resetPlateHighlights();
+        diceRef.current.forEach((die) => {
+            die.rollingResult = undefined;
+        });
+        onRollingResults?.([]);
+        onResults?.([]);
 
         const impulseBase = impulseDirection
             ? new Vec3(impulseDirection.x * 6, 6 + Math.random() * 2, impulseDirection.z * 6)
@@ -1129,6 +1198,20 @@ const PhysicsDice = ({
                 mesh.quaternion.set(body.quaternion.x, body.quaternion.y, body.quaternion.z, body.quaternion.w);
             });
 
+            diceRef.current.forEach((die) => {
+                if (!die.thumbnail) return;
+                const { renderer, camera, scene, mesh: thumbMesh, canvas } = die.thumbnail;
+                const width = canvas.clientWidth || 72;
+                const height = canvas.clientHeight || 72;
+                if (renderer.getSize(new THREE.Vector2()).width !== width || renderer.getSize(new THREE.Vector2()).height !== height) {
+                    renderer.setSize(width, height, false);
+                    camera.aspect = width / height;
+                    camera.updateProjectionMatrix();
+                }
+                thumbMesh.quaternion.copy(die.mesh.quaternion);
+                renderer.render(scene, camera);
+            });
+
             const camera = cameraRef.current;
             if (camera && diceRef.current.length > 0) {
                 if (zoomOutRef.current) {
@@ -1255,6 +1338,23 @@ const PhysicsDice = ({
                         }
                     });
                 });
+            }
+
+            const nowMs = performance.now();
+            if (!resultEmittedRef.current && nowMs - lastRollingUpdateRef.current > 90) {
+                const rollingResults = diceRef.current.map((die) => {
+                    const spinSpeed = die.body.angularVelocity.length();
+                    const speedFactor = Math.min(Math.max(spinSpeed / 8, 0.2), 2);
+                    const sidesCount = die.faces.length || 6;
+                    if (!die.rollingResult || Math.random() < 0.35 * speedFactor) {
+                        die.rollingResult = Math.floor(Math.random() * sidesCount) + 1;
+                    } else {
+                        die.rollingResult = ((die.rollingResult - 1 + Math.ceil(speedFactor)) % sidesCount) + 1;
+                    }
+                    return die.rollingResult;
+                });
+                lastRollingUpdateRef.current = nowMs;
+                onRollingResults?.(rollingResults);
             }
 
             if (camera) {
@@ -1389,6 +1489,13 @@ const PhysicsDice = ({
     useEffect(() => {
         highlightTextColorsRef.current = highlightTextColors;
     }, [highlightTextColors]);
+
+    useEffect(() => {
+        thumbnailCanvasesRef.current = thumbnailCanvases;
+        diceRef.current.forEach((die, index) => {
+            setupThumbnail(die, thumbnailCanvases?.[index] ?? null);
+        });
+    }, [thumbnailCanvases]);
 
     useEffect(() => {
         diceRef.current.forEach((die, index) => {
