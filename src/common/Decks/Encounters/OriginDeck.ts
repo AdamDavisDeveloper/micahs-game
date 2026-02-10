@@ -1,4 +1,4 @@
-import type { EncounterCard, Creature } from '../../engine/types/card.types';
+import type { EncounterCard, Creature } from '../../../engine/types/card.types';
 import type { DeckEntry } from '../../../engine/utils/deck.ts';
 
 export const OriginDeck: DeckEntry<EncounterCard>[] = [
